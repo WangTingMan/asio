@@ -2,7 +2,7 @@
 // asio.hpp
 // ~~~~~~~~
 //
-// Copyright (c) 2003-2024 Christopher M. Kohlhoff (chris at kohlhoff dot com)
+// Copyright (c) 2003-2025 Christopher M. Kohlhoff (chris at kohlhoff dot com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -28,7 +28,6 @@
 #include "asio/async_result.hpp"
 #include "asio/awaitable.hpp"
 #include "asio/basic_datagram_socket.hpp"
-#include "asio/basic_deadline_timer.hpp"
 #include "asio/basic_file.hpp"
 #include "asio/basic_io_object.hpp"
 #include "asio/basic_random_access_file.hpp"
@@ -74,7 +73,6 @@
 #include "asio/connect_pipe.hpp"
 #include "asio/consign.hpp"
 #include "asio/coroutine.hpp"
-#include "asio/deadline_timer.hpp"
 #include "asio/defer.hpp"
 #include "asio/deferred.hpp"
 #include "asio/default_completion_token.hpp"
@@ -183,7 +181,6 @@
 #include "asio/this_coro.hpp"
 #include "asio/thread.hpp"
 #include "asio/thread_pool.hpp"
-#include "asio/time_traits.hpp"
 #include "asio/use_awaitable.hpp"
 #include "asio/use_future.hpp"
 #include "asio/uses_executor.hpp"

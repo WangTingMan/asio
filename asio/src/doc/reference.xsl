@@ -2,7 +2,7 @@
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
 
 <!--
-  Copyright (c) 2003-2024 Christopher M. Kohlhoff (chris at kohlhoff dot com)
+  Copyright (c) 2003-2025 Christopher M. Kohlhoff (chris at kohlhoff dot com)
 
   Distributed under the Boost Software License, Version 1.0. (See accompanying
   file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -30,7 +30,7 @@
 -->
 <xsl:template match="/doxygen">
 <xsl:text>[/
- / Copyright (c) 2003-2024 Christopher M. Kohlhoff (chris at kohlhoff dot com)
+ / Copyright (c) 2003-2025 Christopher M. Kohlhoff (chris at kohlhoff dot com)
  /
  / Distributed under the Boost Software License, Version 1.0. (See accompanying
  / file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -734,6 +734,16 @@
       <xsl:value-of select="."/>
       <xsl:text>]</xsl:text>
     </xsl:when>
+    <xsl:when test="@refid = 'async_op_requirements'">
+      <xsl:text>[link asio.reference.asynchronous_operations </xsl:text>
+      <xsl:value-of select="."/>
+      <xsl:text>]</xsl:text>
+    </xsl:when>
+    <xsl:when test="@refid = 'async_result_requirements'">
+      <xsl:text>[link asio.reference.asynchronous_operations.completion_tokens_and_handlers </xsl:text>
+      <xsl:value-of select="."/>
+      <xsl:text>]</xsl:text>
+    </xsl:when>
     <xsl:otherwise>
       <xsl:text>`</xsl:text>
       <xsl:value-of select="."/>
@@ -871,6 +881,15 @@
       <xsl:text>[^asio/ssl.hpp]</xsl:text>
     </xsl:when>
     <xsl:when test="contains($file, 'asio/spawn')">
+      <xsl:text>None</xsl:text>
+    </xsl:when>
+    <xsl:when test="contains($file, 'asio/basic_deadline_timer')">
+      <xsl:text>None</xsl:text>
+    </xsl:when>
+    <xsl:when test="contains($file, 'asio/deadline_timer')">
+      <xsl:text>None</xsl:text>
+    </xsl:when>
+    <xsl:when test="contains($file, 'asio/time_traits')">
       <xsl:text>None</xsl:text>
     </xsl:when>
     <xsl:when test="contains($file, 'asio/experimental')">
@@ -1706,6 +1725,9 @@
         <xsl:when test="$declname = 'Context_Service'">
           <xsl:value-of select="$declname"/>
         </xsl:when>
+        <xsl:when test="$declname = 'ConvertibleToBuffer'">
+          <xsl:value-of select="$declname"/>
+        </xsl:when>
         <xsl:when test="$declname = 'DefaultCandidate'">
           <xsl:value-of select="$declname"/>
         </xsl:when>
@@ -1738,6 +1760,9 @@
         </xsl:when>
         <xsl:when test="$declname = 'Executor2'">
           <xsl:value-of select="concat('``[link asio.reference.Executor1 ', $declname, ']``')"/>
+        </xsl:when>
+        <xsl:when test="$declname = 'Extent'">
+          <xsl:value-of select="$declname"/>
         </xsl:when>
         <xsl:when test="$declname = 'F'">
           <xsl:value-of select="$declname"/>
@@ -1903,6 +1928,9 @@
         </xsl:when>
         <xsl:when test="$declname = 'SocketService1' or $declname = 'SocketService2'">
           <xsl:value-of select="concat('``[link asio.reference.SocketService ', $declname, ']``')"/>
+        </xsl:when>
+        <xsl:when test="$declname = 'Span'">
+          <xsl:value-of select="$declname"/>
         </xsl:when>
         <xsl:when test="$declname = 'StackAllocator'">
           <xsl:value-of select="$declname"/>
