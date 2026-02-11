@@ -15,7 +15,7 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\asio\src\examples\cpp14\echo\blocking_tcp_echo_client.cpp">
+    <ClCompile Include="..\..\src\examples\cpp14\echo\blocking_tcp_echo_client.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>

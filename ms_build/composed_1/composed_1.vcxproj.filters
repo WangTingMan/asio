@@ -15,7 +15,7 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\asio\src\examples\cpp20\operations\composed_1.cpp">
+    <ClCompile Include="..\..\src\examples\cpp20\operations\composed_1.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>

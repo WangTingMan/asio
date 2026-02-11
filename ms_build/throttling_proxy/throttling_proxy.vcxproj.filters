@@ -15,7 +15,7 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\asio\src\examples\cpp20\channels\throttling_proxy.cpp">
+    <ClCompile Include="..\..\src\examples\cpp20\channels\throttling_proxy.cpp">
       <Filter>source</Filter>
     </ClCompile>
   </ItemGroup>

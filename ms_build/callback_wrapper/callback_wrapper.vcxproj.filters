@@ -15,7 +15,7 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\asio\src\examples\cpp20\operations\callback_wrapper.cpp">
+    <ClCompile Include="..\..\src\examples\cpp20\operations\callback_wrapper.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>
