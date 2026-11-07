@@ -2,7 +2,7 @@
 // strand.hpp
 // ~~~~~~~~~~
 //
-// Copyright (c) 2003-2025 Christopher M. Kohlhoff (chris at kohlhoff dot com)
+// Copyright (c) 2003-2026 Christopher M. Kohlhoff (chris at kohlhoff dot com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -16,6 +16,7 @@
 #endif // defined(_MSC_VER) && (_MSC_VER >= 1200)
 
 #include "asio/detail/config.hpp"
+#include "asio/detail/native_executors.hpp"
 #include "asio/detail/strand_executor_service.hpp"
 #include "asio/detail/type_traits.hpp"
 #include "asio/execution/blocking.hpp"
@@ -25,8 +26,12 @@
 #include "asio/detail/push_options.hpp"
 
 namespace asio {
+ASIO_INLINE_NAMESPACE_BEGIN
 
 /// Provides serialised function invocation for any executor type.
+/**
+ * @sa @ref overview_strands "Strands"
+ */
 template <typename Executor>
 class strand
 {
@@ -458,6 +463,22 @@ make_strand(ExecutionContext& ctx,
 
 #if !defined(GENERATING_DOCUMENTATION)
 
+namespace detail {
+
+template <typename Executor>
+struct native_outstanding_work_kind<strand<Executor>>
+{
+  using type = conditional_t<
+      is_same<
+        native_outstanding_work_kind_t<Executor>,
+        native_outstanding_work_kinds::native
+      >::value,
+      native_outstanding_work_kinds::native,
+      native_outstanding_work_kinds::none
+    >;
+};
+
+} // namespace detail
 namespace traits {
 
 #if !defined(ASIO_HAS_DEDUCED_EQUALITY_COMPARABLE_TRAIT)
@@ -542,6 +563,7 @@ struct prefer_member<strand<Executor>, Property,
 
 #endif // !defined(GENERATING_DOCUMENTATION)
 
+ASIO_INLINE_NAMESPACE_END
 } // namespace asio
 
 #include "asio/detail/pop_options.hpp"

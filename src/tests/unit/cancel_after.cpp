@@ -2,7 +2,7 @@
 // cancel_after.cpp
 // ~~~~~~~~~~~~~~~~
 //
-// Copyright (c) 2003-2025 Christopher M. Kohlhoff (chris at kohlhoff dot com)
+// Copyright (c) 2003-2026 Christopher M. Kohlhoff (chris at kohlhoff dot com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -17,6 +17,7 @@
 #include "asio/cancel_after.hpp"
 
 #include <functional>
+#include "asio/any_io_executor.hpp"
 #include "asio/io_context.hpp"
 #include "asio/steady_timer.hpp"
 #include "unit_test.hpp"
@@ -150,6 +151,79 @@ void cancel_after_timer_function_object_test()
   t.async_wait(
       cancel_after(cancellation_timer1, chronons::seconds(10),
         cancel_after(cancellation_timer2, chronons::milliseconds(100),
+          bindns::bind(&increment_on_cancel,
+            &count, bindns::placeholders::_1))));
+
+  ioc.restart();
+  ioc.run();
+
+  ASIO_CHECK(count == 3);
+}
+
+void cancel_after_trigger_function_object_test()
+{
+  io_context ioc;
+  steady_timer cancellation_timer1(ioc);
+  steady_timer cancellation_timer2(ioc);
+  int count = 0;
+
+  steady_timer t(ioc, chronons::milliseconds(100));
+  cancellation_timer1.expires_after(chronons::seconds(5));
+  t.async_wait(
+      cancel_after(cancellation_timer1.async_wait(),
+        bindns::bind(&increment_on_cancel,
+          &count, bindns::placeholders::_1)));
+
+  ioc.run();
+
+  ASIO_CHECK(count == 0);
+
+  t.expires_after(chronons::seconds(5));
+  cancellation_timer1.expires_after(chronons::milliseconds(100));
+  t.async_wait(
+      cancel_after(cancellation_timer1.async_wait(),
+        bindns::bind(&increment_on_cancel,
+          &count, bindns::placeholders::_1)));
+
+  ioc.restart();
+  ioc.run();
+
+  ASIO_CHECK(count == 1);
+
+  t.expires_after(chronons::milliseconds(100));
+  cancellation_timer1.expires_after(chronons::seconds(5));
+  cancellation_timer2.expires_after(chronons::seconds(10));
+  t.async_wait(
+      cancel_after(cancellation_timer1.async_wait(),
+        cancel_after(cancellation_timer2.async_wait(),
+          bindns::bind(&increment_on_cancel,
+            &count, bindns::placeholders::_1))));
+
+  ioc.restart();
+  ioc.run();
+
+  ASIO_CHECK(count == 1);
+
+  t.expires_after(chronons::seconds(5));
+  cancellation_timer1.expires_after(chronons::milliseconds(100));
+  cancellation_timer2.expires_after(chronons::milliseconds(10));
+  t.async_wait(
+      cancel_after(cancellation_timer1.async_wait(),
+        cancel_after(cancellation_timer2.async_wait(),
+          bindns::bind(&increment_on_cancel,
+            &count, bindns::placeholders::_1))));
+
+  ioc.restart();
+  ioc.run();
+
+  ASIO_CHECK(count == 2);
+
+  t.expires_after(chronons::seconds(5));
+  cancellation_timer1.expires_after(chronons::seconds(10));
+  cancellation_timer2.expires_after(chronons::milliseconds(100));
+  t.async_wait(
+      cancel_after(cancellation_timer1.async_wait(),
+        cancel_after(cancellation_timer2.async_wait(),
           bindns::bind(&increment_on_cancel,
             &count, bindns::placeholders::_1))));
 
@@ -311,6 +385,75 @@ void cancel_after_timer_completion_token_v1_test()
   ASIO_CHECK(count == 3);
 }
 
+void cancel_after_trigger_completion_token_v1_test()
+{
+  io_context ioc;
+  steady_timer cancellation_timer1(ioc);
+  steady_timer cancellation_timer2(ioc);
+  int count = 0;
+
+  steady_timer t(ioc, chronons::milliseconds(100));
+  cancellation_timer1.expires_after(chronons::seconds(5));
+  t.async_wait(
+      cancel_after(cancellation_timer1.async_wait(),
+        incrementer_token_v1(&count)));
+
+  ioc.run();
+
+  ASIO_CHECK(count == 0);
+
+  t.expires_after(chronons::seconds(5));
+  cancellation_timer1.expires_after(chronons::milliseconds(100));
+  t.async_wait(
+      cancel_after(cancellation_timer1.async_wait(),
+        bindns::bind(&increment_on_cancel,
+          &count, bindns::placeholders::_1)));
+
+  ioc.restart();
+  ioc.run();
+
+  ASIO_CHECK(count == 1);
+
+  t.expires_after(chronons::milliseconds(100));
+  cancellation_timer1.expires_after(chronons::seconds(5));
+  cancellation_timer2.expires_after(chronons::seconds(10));
+  t.async_wait(
+      cancel_after(cancellation_timer1.async_wait(),
+        cancel_after(cancellation_timer2.async_wait(),
+          incrementer_token_v1(&count))));
+
+  ioc.restart();
+  ioc.run();
+
+  ASIO_CHECK(count == 1);
+
+  t.expires_after(chronons::seconds(5));
+  cancellation_timer1.expires_after(chronons::milliseconds(100));
+  cancellation_timer2.expires_after(chronons::seconds(10));
+  t.async_wait(
+      cancel_after(cancellation_timer1.async_wait(),
+        cancel_after(cancellation_timer2.async_wait(),
+          incrementer_token_v1(&count))));
+
+  ioc.restart();
+  ioc.run();
+
+  ASIO_CHECK(count == 2);
+
+  t.expires_after(chronons::seconds(5));
+  cancellation_timer1.expires_after(chronons::seconds(10));
+  cancellation_timer2.expires_after(chronons::milliseconds(100));
+  t.async_wait(
+      cancel_after(cancellation_timer1.async_wait(),
+        cancel_after(cancellation_timer2.async_wait(),
+          incrementer_token_v1(&count))));
+
+  ioc.restart();
+  ioc.run();
+
+  ASIO_CHECK(count == 3);
+}
+
 struct incrementer_token_v2
 {
   explicit incrementer_token_v2(int* c) : count(c) {}
@@ -454,6 +597,74 @@ void cancel_after_timer_completion_token_v2_test()
   ASIO_CHECK(count == 3);
 }
 
+void cancel_after_trigger_completion_token_v2_test()
+{
+  io_context ioc;
+  steady_timer cancellation_timer1(ioc);
+  steady_timer cancellation_timer2(ioc);
+  int count = 0;
+
+  steady_timer t(ioc, chronons::milliseconds(100));
+  cancellation_timer1.expires_after(chronons::seconds(5));
+  t.async_wait(
+      cancel_after(cancellation_timer1.async_wait(),
+        incrementer_token_v2(&count)));
+
+  ioc.run();
+
+  ASIO_CHECK(count == 0);
+
+  t.expires_after(chronons::seconds(5));
+  cancellation_timer1.expires_after(chronons::milliseconds(100));
+  t.async_wait(
+      cancel_after(cancellation_timer1.async_wait(),
+        incrementer_token_v2(&count)));
+
+  ioc.restart();
+  ioc.run();
+
+  ASIO_CHECK(count == 1);
+
+  t.expires_after(chronons::milliseconds(100));
+  cancellation_timer1.expires_after(chronons::seconds(5));
+  cancellation_timer2.expires_after(chronons::seconds(10));
+  t.async_wait(
+      cancel_after(cancellation_timer1.async_wait(),
+        cancel_after(cancellation_timer2.async_wait(),
+          incrementer_token_v2(&count))));
+
+  ioc.restart();
+  ioc.run();
+
+  ASIO_CHECK(count == 1);
+
+  t.expires_after(chronons::seconds(5));
+  cancellation_timer1.expires_after(chronons::milliseconds(100));
+  cancellation_timer2.expires_after(chronons::seconds(10));
+  t.async_wait(
+      cancel_after(cancellation_timer1.async_wait(),
+        cancel_after(cancellation_timer2.async_wait(),
+          incrementer_token_v2(&count))));
+
+  ioc.restart();
+  ioc.run();
+
+  ASIO_CHECK(count == 2);
+
+  t.expires_after(chronons::seconds(5));
+  cancellation_timer1.expires_after(chronons::seconds(10));
+  cancellation_timer2.expires_after(chronons::milliseconds(100));
+  t.async_wait(
+      cancel_after(cancellation_timer1.async_wait(),
+        cancel_after(cancellation_timer2.async_wait(),
+          incrementer_token_v2(&count))));
+
+  ioc.restart();
+  ioc.run();
+
+  ASIO_CHECK(count == 3);
+}
+
 void partial_cancel_after_test()
 {
   io_context ioc;
@@ -501,15 +712,124 @@ void partial_cancel_after_timer_test()
   ASIO_CHECK(count == 1);
 }
 
+void partial_cancel_after_trigger_test()
+{
+  io_context ioc;
+  steady_timer cancellation_timer(ioc);
+  int count = 0;
+
+  steady_timer t(ioc, chronons::milliseconds(100));
+  cancellation_timer.expires_after(chronons::seconds(5));
+  t.async_wait(cancel_after(cancellation_timer.async_wait()))(
+      incrementer_token_v2(&count));
+
+  ioc.run();
+
+  ASIO_CHECK(count == 0);
+
+  t.expires_after(chronons::seconds(5));
+  cancellation_timer.expires_after(chronons::milliseconds(100));
+  t.async_wait(cancel_after(cancellation_timer.async_wait()))(
+      incrementer_token_v2(&count));
+
+  ioc.restart();
+  ioc.run();
+
+  ASIO_CHECK(count == 1);
+}
+
+template <typename Handler>
+struct sync_cancel_handler
+{
+  Handler handler_;
+
+  explicit sync_cancel_handler(Handler h)
+    : handler_(static_cast<Handler&&>(h))
+  {
+  }
+
+  void operator()(cancellation_type)
+  {
+    static_cast<Handler&&>(handler_)(asio::error::operation_aborted);
+  }
+};
+
+struct sync_cancel_initiation
+{
+  typedef any_io_executor executor_type;
+
+  executor_type executor_;
+
+  executor_type get_executor() const noexcept
+  {
+    return executor_;
+  }
+
+  template <typename Handler>
+  void operator()(Handler&& handler) const
+  {
+    cancellation_slot slot = get_associated_cancellation_slot(handler);
+    if (slot.is_connected())
+      slot.template emplace<sync_cancel_handler<decay_t<Handler> > >(
+          static_cast<Handler&&>(handler));
+  }
+};
+
+template <typename CompletionToken>
+ASIO_INITFN_AUTO_RESULT_TYPE(CompletionToken, void(asio::error_code))
+async_sync_cancel(const any_io_executor& ex, CompletionToken&& token)
+{
+  return async_initiate<CompletionToken, void(asio::error_code)>(
+      sync_cancel_initiation{ex}, token);
+}
+
+void cancel_after_sync_completion_test()
+{
+  io_context ioc;
+  int count = 0;
+
+  async_sync_cancel(ioc.get_executor(),
+      cancel_after(chronons::milliseconds(100),
+        bindns::bind(&increment_on_cancel,
+          &count, bindns::placeholders::_1)));
+
+  ioc.run();
+
+  ASIO_CHECK(count == 1);
+}
+
+void cancel_after_trigger_sync_completion_test()
+{
+  io_context ioc;
+  steady_timer cancellation_timer(ioc);
+  int count = 0;
+
+  cancellation_timer.expires_after(chronons::milliseconds(100));
+  async_sync_cancel(ioc.get_executor(),
+      cancel_after(cancellation_timer.async_wait(),
+        bindns::bind(&increment_on_cancel,
+          &count, bindns::placeholders::_1)));
+
+  ioc.run();
+
+  ASIO_CHECK(count == 1);
+}
+
 ASIO_TEST_SUITE
 (
   "cancel_after",
   ASIO_TEST_CASE(cancel_after_function_object_test)
   ASIO_TEST_CASE(cancel_after_timer_function_object_test)
+  ASIO_TEST_CASE(cancel_after_trigger_function_object_test)
   ASIO_TEST_CASE(cancel_after_completion_token_v1_test)
   ASIO_TEST_CASE(cancel_after_timer_completion_token_v1_test)
+  ASIO_TEST_CASE(cancel_after_trigger_completion_token_v1_test)
   ASIO_TEST_CASE(cancel_after_completion_token_v2_test)
   ASIO_TEST_CASE(cancel_after_timer_completion_token_v2_test)
+  ASIO_TEST_CASE(cancel_after_trigger_completion_token_v2_test)
   ASIO_TEST_CASE(partial_cancel_after_test)
   ASIO_TEST_CASE(partial_cancel_after_timer_test)
+  ASIO_TEST_CASE(partial_cancel_after_trigger_test)
+  ASIO_TEST_CASE(cancel_after_sync_completion_test)
+  ASIO_TEST_CASE(cancel_after_trigger_sync_completion_test)
 )

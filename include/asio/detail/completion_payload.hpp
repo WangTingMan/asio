@@ -2,7 +2,7 @@
 // detail/completion_payload.hpp
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //
-// Copyright (c) 2003-2025 Christopher M. Kohlhoff (chris at kohlhoff dot com)
+// Copyright (c) 2003-2026 Christopher M. Kohlhoff (chris at kohlhoff dot com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -29,6 +29,7 @@
 #include "asio/detail/push_options.hpp"
 
 namespace asio {
+ASIO_INLINE_NAMESPACE_BEGIN
 namespace detail {
 
 template <typename... Signatures>
@@ -47,6 +48,12 @@ public:
   {
     static_cast<Handler&&>(handler)();
   }
+
+  template <typename Handler>
+  void peek(Handler& handler) const
+  {
+    static_cast<Handler&&>(handler)();
+  }
 };
 
 template <typename Signature>
@@ -62,6 +69,12 @@ public:
   void receive(Handler& handler)
   {
     message_.receive(handler);
+  }
+
+  template <typename Handler>
+  void peek(Handler& handler) const
+  {
+    message_.peek(handler);
   }
 
 private:
@@ -87,6 +100,16 @@ public:
         [&](auto& message)
         {
           message.receive(handler);
+        }, message_);
+  }
+
+  template <typename Handler>
+  void peek(Handler& handler) const
+  {
+    std::visit(
+        [&](const auto& message)
+        {
+          message.peek(handler);
         }, message_);
   }
 
@@ -122,6 +145,15 @@ public:
       completion_message<R1()>(0).receive(handler);
     else
       message_.receive(handler);
+  }
+
+  template <typename Handler>
+  void peek(Handler& handler) const
+  {
+    if (empty_)
+      completion_message<R1()>(0).peek(handler);
+    else
+      message_.peek(handler);
   }
 
 private:
@@ -197,6 +229,22 @@ public:
     }
   }
 
+  template <typename Handler>
+  void peek(Handler& handler) const
+  {
+    switch (index_)
+    {
+    case 1:
+      storage_.message_1_.peek(handler);
+      break;
+    case 2:
+      storage_.message_2_.peek(handler);
+      break;
+    default:
+      break;
+    }
+  }
+
 private:
   union storage
   {
@@ -213,6 +261,7 @@ private:
 #endif // defined(ASIO_HAS_STD_VARIANT)
 
 } // namespace detail
+ASIO_INLINE_NAMESPACE_END
 } // namespace asio
 
 #include "asio/detail/pop_options.hpp"

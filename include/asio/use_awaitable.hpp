@@ -2,7 +2,7 @@
 // use_awaitable.hpp
 // ~~~~~~~~~~~~~~~~~
 //
-// Copyright (c) 2003-2025 Christopher M. Kohlhoff (chris at kohlhoff dot com)
+// Copyright (c) 2003-2026 Christopher M. Kohlhoff (chris at kohlhoff dot com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -31,6 +31,7 @@
 #include "asio/detail/push_options.hpp"
 
 namespace asio {
+ASIO_INLINE_NAMESPACE_BEGIN
 
 /// A @ref completion_token that represents the currently executing coroutine.
 /**
@@ -98,6 +99,9 @@ struct use_awaitable_t
     /// Specify @c use_awaitable_t as the default completion token type.
     typedef use_awaitable_t default_completion_token_type;
 
+    /// The adapted executor type, without the default completion token.
+    typedef InnerExecutor executor_without_default;
+
     /// Construct the adapted executor from the inner executor type.
     template <typename InnerExecutor1>
     executor_with_default(const InnerExecutor1& ex,
@@ -150,6 +154,7 @@ ASIO_INLINE_VARIABLE constexpr use_awaitable_t<> use_awaitable;
 ASIO_INLINE_VARIABLE constexpr use_awaitable_t<> use_awaitable(0, 0, 0);
 #endif
 
+ASIO_INLINE_NAMESPACE_END
 } // namespace asio
 
 #include "asio/detail/pop_options.hpp"

@@ -2,7 +2,7 @@
 // detail/win_iocp_handle_service.hpp
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //
-// Copyright (c) 2003-2025 Christopher M. Kohlhoff (chris at kohlhoff dot com)
+// Copyright (c) 2003-2026 Christopher M. Kohlhoff (chris at kohlhoff dot com)
 // Copyright (c) 2008 Rep Invariant Systems, Inc. (info@repinvariant.com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
@@ -36,6 +36,7 @@
 #include "asio/detail/push_options.hpp"
 
 namespace asio {
+ASIO_INLINE_NAMESPACE_BEGIN
 namespace detail {
 
 class win_iocp_handle_service :
@@ -288,6 +289,14 @@ public:
     p.v = p.p = 0;
   }
 
+  // Get the number of bytes of a buffer that may be requested in a single
+  // ReadFile or WriteFile call.
+  static DWORD transfer_size(std::size_t buffer_size)
+  {
+    return buffer_size < MAXDWORD
+      ? static_cast<DWORD>(buffer_size) : MAXDWORD;
+  }
+
 private:
   // Prevent the use of the null_buffers type with this service.
   size_t write_some(implementation_type& impl,
@@ -376,11 +385,11 @@ private:
     }
 
     static void do_complete(void* owner, operation* base,
-        const asio::error_code& result_ec,
-        std::size_t bytes_transferred)
+        int error_value, std::size_t bytes_transferred)
     {
       iocp_op_cancellation* o = static_cast<iocp_op_cancellation*>(base);
-      o->target_->complete(owner, result_ec, bytes_transferred);
+      o->target_->Internal = o->Internal;
+      o->target_->complete(owner, error_value, bytes_transferred);
     }
 
     void operator()(cancellation_type_t type)
@@ -418,6 +427,7 @@ private:
 };
 
 } // namespace detail
+ASIO_INLINE_NAMESPACE_END
 } // namespace asio
 
 #include "asio/detail/pop_options.hpp"

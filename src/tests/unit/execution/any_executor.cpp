@@ -2,7 +2,7 @@
 // any_executor.cpp
 // ~~~~~~~~~~~~~~~~
 //
-// Copyright (c) 2003-2025 Christopher M. Kohlhoff (chris at kohlhoff dot com)
+// Copyright (c) 2003-2026 Christopher M. Kohlhoff (chris at kohlhoff dot com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -18,7 +18,15 @@
 
 #include <cstring>
 #include <functional>
+#include <memory>
+#include <type_traits>
+#include <utility>
 #include "asio/thread_pool.hpp"
+#include "asio/io_context.hpp"
+#include "asio/any_completion_executor.hpp"
+#include "asio/any_io_executor.hpp"
+#include "asio/detail/executor_function.hpp"
+#include "asio/strand.hpp"
 #include "../unit_test.hpp"
 
 using namespace asio;
@@ -1190,13 +1198,225 @@ void any_executor_execute_test()
   ASIO_CHECK(count == 6);
 }
 
+// An operation that records how it was run. A target that takes a ready-made
+// operation as it stands runs it from the scheduler, which passes itself as
+// the owner. One that wraps it in a second operation runs the inner operation
+// from that wrapper, which passes the operation itself as the owner.
+struct recording_operation : asio::detail::operation
+{
+  int* count_;
+  bool* wrapped_;
+
+  recording_operation(int* count, bool* wrapped)
+    : asio::detail::operation(&recording_operation::do_complete),
+      count_(count),
+      wrapped_(wrapped)
+  {
+  }
+
+  static void do_complete(void* owner, asio::detail::operation* base,
+      int /*error_value*/, std::size_t /*bytes_transferred*/)
+  {
+    recording_operation* o = static_cast<recording_operation*>(base);
+    if (owner)
+    {
+      ++*o->count_;
+      if (owner == static_cast<void*>(o))
+        *o->wrapped_ = true;
+    }
+    delete o;
+  }
+};
+
+// The overload set that any_executor::execute presents, reproduced here with
+// distinguishable return types so that the compiler's choice between the two
+// candidates can be observed directly rather than assumed.
+struct chose_template
+{
+};
+
+struct chose_ready_made
+{
+};
+
+struct execute_overload_probe
+{
+  template <typename F>
+  chose_template execute(F&&) const;
+
+  chose_ready_made execute(asio::detail::executor_function&&) const;
+};
+
+template <typename Arg>
+struct execute_overload_chosen
+{
+  typedef decltype(
+      std::declval<const execute_overload_probe&>().execute(
+        std::declval<Arg>())) type;
+};
+
+typedef asio::detail::executor_function ready_made;
+
+// A ready-made operation selects the non-template overload.
+static_assert(std::is_same<
+    execute_overload_chosen<ready_made>::type, chose_ready_made>::value,
+    "an rvalue executor_function selects the non-template overload");
+
+// Everything else, an lvalue executor_function included, is unaffected.
+static_assert(std::is_same<
+    execute_overload_chosen<ready_made&>::type, chose_template>::value,
+    "an lvalue executor_function still selects the template");
+
+static_assert(std::is_same<
+    execute_overload_chosen<const ready_made&>::type, chose_template>::value,
+    "a const lvalue executor_function still selects the template");
+
+static_assert(std::is_same<
+    execute_overload_chosen<const ready_made>::type, chose_template>::value,
+    "a const rvalue executor_function still selects the template");
+
+static_assert(std::is_same<
+    execute_overload_chosen<void (*)()>::type, chose_template>::value,
+    "a plain function pointer still selects the template");
+
+static_assert(std::is_same<
+    execute_overload_chosen<int>::type, chose_template>::value,
+    "an unrelated argument still selects the template");
+
+void any_executor_execute_ready_made_test()
+{
+  int count = 0;
+
+  asio::io_context ioc(1);
+  asio::any_io_executor ex(ioc.get_executor());
+
+  // A ready-made operation submitted to a target that queues it.
+  ex.execute(asio::detail::executor_function(
+        bindns::bind(increment, &count), std::allocator<void>()));
+
+  // And to a target reached by way of a strand.
+  asio::strand<asio::any_io_executor> st(ex);
+  asio::any_io_executor stex(st);
+  stex.execute(asio::detail::executor_function(
+        bindns::bind(increment, &count), std::allocator<void>()));
+
+  ioc.run();
+
+  ASIO_CHECK(count == 2);
+
+  // An always-blocking target runs the operation in place.
+  thread_pool pool(1);
+  execution::any_executor<
+      execution::blocking_t::possibly_t,
+      execution::blocking_t::always_t,
+      execution::blocking_t::never_t>
+    bex(asio::require(pool.executor(), asio::execution::blocking.always));
+
+  bex.execute(asio::detail::executor_function(
+        bindns::bind(increment, &count), std::allocator<void>()));
+
+  ASIO_CHECK(count == 3);
+
+  // An executor with no target throws, and the operation is destroyed with
+  // the function it holds rather than run.
+  asio::any_io_executor empty;
+  bool caught = false;
+  try
+  {
+    empty.execute(asio::detail::executor_function(
+          bindns::bind(increment, &count), std::allocator<void>()));
+  }
+  catch (asio::execution::bad_executor&)
+  {
+    caught = true;
+  }
+
+  ASIO_CHECK(caught);
+  ASIO_CHECK(count == 3);
+
+  pool.wait();
+
+  // The operation is handed to the target as it stands. Were it wrapped in a
+  // second operation instead, the inner one would be run by that wrapper
+  // rather than by the scheduler.
+  int handed_count = 0;
+  bool handed_wrapped = false;
+  ioc.restart();
+  ex.execute(asio::detail::executor_function(
+        new recording_operation(&handed_count, &handed_wrapped)));
+  ioc.run();
+
+  ASIO_CHECK(handed_count == 1);
+  ASIO_CHECK(!handed_wrapped);
+}
+
+void executor_targets_equal_test()
+{
+  asio::io_context ioc1;
+  asio::io_context ioc2;
+  asio::any_io_executor poly(ioc1.get_executor());
+
+  // A polymorphic executor against the concrete executor it erases,
+  // either way round.
+  ASIO_CHECK(asio::execution::detail::executor_targets_equal(
+        poly, ioc1.get_executor()));
+  ASIO_CHECK(asio::execution::detail::executor_targets_equal(
+        ioc1.get_executor(), poly));
+
+  // The same concrete type, a different executor: must NOT be equal, or a
+  // completion would be run on the wrong context's behalf.
+  ASIO_CHECK(!asio::execution::detail::executor_targets_equal(
+        poly, ioc2.get_executor()));
+  ASIO_CHECK(!asio::execution::detail::executor_targets_equal(
+        ioc2.get_executor(), poly));
+
+  // Two polymorphic executors of differing any_executor<...> instantiations:
+  // compared on the any_executor_base layer they share, since a direct ==
+  // between them would be ambiguous. The same target, either way round.
+  asio::any_completion_executor completion_poly(ioc1.get_executor());
+  ASIO_CHECK(asio::execution::detail::executor_targets_equal(
+        poly, completion_poly));
+  ASIO_CHECK(asio::execution::detail::executor_targets_equal(
+        completion_poly, poly));
+
+  // The same pair over differing contexts: must NOT be equal.
+  asio::any_completion_executor completion_poly2(ioc2.get_executor());
+  ASIO_CHECK(!asio::execution::detail::executor_targets_equal(
+        poly, completion_poly2));
+  ASIO_CHECK(!asio::execution::detail::executor_targets_equal(
+        completion_poly2, poly));
+
+  // A different concrete type altogether.
+  asio::thread_pool pool(1);
+  ASIO_CHECK(!asio::execution::detail::executor_targets_equal(
+        poly, pool.get_executor()));
+
+  // An executor with no target matches nothing.
+  asio::any_io_executor empty;
+  ASIO_CHECK(!asio::execution::detail::executor_targets_equal(
+        empty, ioc1.get_executor()));
+
+  // A target that carries tracked outstanding work is a distinct target,
+  // and so does not match the plain executor it was preferred from.
+  asio::any_io_executor tracked(
+      asio::prefer(poly, asio::execution::outstanding_work.tracked));
+  ASIO_CHECK(!asio::execution::detail::executor_targets_equal(
+        tracked, ioc1.get_executor()));
+
+  // Two differing concrete types are never equal.
+  ASIO_CHECK(!asio::execution::detail::executor_targets_equal(
+        ioc1.get_executor(), pool.get_executor()));
+}
+
 ASIO_TEST_SUITE
 (
   "any_executor",
+  ASIO_TEST_CASE(executor_targets_equal_test)
   ASIO_TEST_CASE(any_executor_construction_test)
   ASIO_TEST_CASE(any_executor_nothrow_construction_test)
   ASIO_TEST_CASE(any_executor_assignment_test)
   ASIO_TEST_CASE(any_executor_swap_test)
   ASIO_TEST_CASE(any_executor_query_test)
   ASIO_TEST_CASE(any_executor_execute_test)
+  ASIO_TEST_CASE(any_executor_execute_ready_made_test)
 )

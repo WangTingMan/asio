@@ -2,7 +2,7 @@
 // associated_immediate_executor.hpp
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //
-// Copyright (c) 2003-2025 Christopher M. Kohlhoff (chris at kohlhoff dot com)
+// Copyright (c) 2003-2026 Christopher M. Kohlhoff (chris at kohlhoff dot com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -28,6 +28,7 @@
 #include "asio/detail/push_options.hpp"
 
 namespace asio {
+ASIO_INLINE_NAMESPACE_BEGIN
 
 template <typename T, typename Executor>
 struct associated_immediate_executor;
@@ -176,6 +177,8 @@ struct associated_immediate_executor_impl<T, E,
  * @li Provide a noexcept static member function named @c get, callable as @c
  * get(t,e) and with return type @c type or a (possibly const) reference to @c
  * type.
+ *
+ * @sa @ref overview_immediate_completion "Customising immediate completion"
  */
 template <typename T, typename Executor>
 struct associated_immediate_executor
@@ -234,6 +237,16 @@ using associated_immediate_executor_t =
 namespace detail {
 
 template <typename T, typename E, typename = void>
+struct has_associated_immediate_executor : true_type {};
+
+template <typename T, typename E>
+struct has_associated_immediate_executor<T, E,
+    void_t<
+      typename associated_immediate_executor<T, E>::
+        asio_associated_immediate_executor_is_unspecialised
+    >> : false_type {};
+
+template <typename T, typename E, typename = void>
 struct associated_immediate_executor_forwarding_base
 {
 };
@@ -241,11 +254,7 @@ struct associated_immediate_executor_forwarding_base
 template <typename T, typename E>
 struct associated_immediate_executor_forwarding_base<T, E,
     enable_if_t<
-      is_same<
-        typename associated_immediate_executor<T,
-          E>::asio_associated_immediate_executor_is_unspecialised,
-        void
-      >::value
+      !has_associated_immediate_executor<T, E>::value
     >>
 {
   typedef void asio_associated_immediate_executor_is_unspecialised;
@@ -274,6 +283,7 @@ struct associated_immediate_executor<reference_wrapper<T>, Executor>
   }
 };
 
+ASIO_INLINE_NAMESPACE_END
 } // namespace asio
 
 #include "asio/detail/pop_options.hpp"

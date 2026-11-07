@@ -2,7 +2,7 @@
 // detail/null_socket_service.hpp
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //
-// Copyright (c) 2003-2025 Christopher M. Kohlhoff (chris at kohlhoff dot com)
+// Copyright (c) 2003-2026 Christopher M. Kohlhoff (chris at kohlhoff dot com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -16,6 +16,7 @@
 #endif // defined(_MSC_VER) && (_MSC_VER >= 1200)
 
 #include "asio/detail/config.hpp"
+#include "asio/detail/io_control.hpp"
 
 #if defined(ASIO_WINDOWS_RUNTIME)
 
@@ -29,6 +30,7 @@
 #include "asio/detail/push_options.hpp"
 
 namespace asio {
+ASIO_INLINE_NAMESPACE_BEGIN
 namespace detail {
 
 template <typename Protocol>
@@ -168,9 +170,16 @@ public:
 
   // Perform an IO control command on the socket.
   template <typename IO_Control_Command>
-  asio::error_code io_control(implementation_type&,
-      IO_Control_Command&, asio::error_code& ec)
+  asio::error_code io_control(implementation_type& impl,
+      IO_Control_Command& command, asio::error_code& ec)
   {
+    const char* descriptor_name = 0;
+    if (get_descriptor_name(command, descriptor_name, ec))
+    {
+      // Descriptor name is unused.
+      return ec;
+    }
+
     ec = asio::error::operation_not_supported;
     return ec;
   }
@@ -510,6 +519,7 @@ public:
 };
 
 } // namespace detail
+ASIO_INLINE_NAMESPACE_END
 } // namespace asio
 
 #include "asio/detail/pop_options.hpp"

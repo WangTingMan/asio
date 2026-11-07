@@ -2,7 +2,7 @@
 // impl/io_context.ipp
 // ~~~~~~~~~~~~~~~~~~~
 //
-// Copyright (c) 2003-2025 Christopher M. Kohlhoff (chris at kohlhoff dot com)
+// Copyright (c) 2003-2026 Christopher M. Kohlhoff (chris at kohlhoff dot com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -21,7 +21,6 @@
 #include "asio/detail/concurrency_hint.hpp"
 #include "asio/detail/limits.hpp"
 #include "asio/detail/service_registry.hpp"
-#include "asio/detail/throw_error.hpp"
 
 #if defined(ASIO_HAS_IOCP)
 # include "asio/detail/win_iocp_io_context.hpp"
@@ -32,6 +31,7 @@
 #include "asio/detail/push_options.hpp"
 
 namespace asio {
+ASIO_INLINE_NAMESPACE_BEGIN
 
 io_context::io_context()
   : execution_context(config_from_concurrency_hint()),
@@ -58,34 +58,22 @@ io_context::~io_context()
 
 io_context::count_type io_context::run()
 {
-  asio::error_code ec;
-  count_type s = impl_.run(ec);
-  asio::detail::throw_error(ec);
-  return s;
+  return impl_.run();
 }
 
 io_context::count_type io_context::run_one()
 {
-  asio::error_code ec;
-  count_type s = impl_.run_one(ec);
-  asio::detail::throw_error(ec);
-  return s;
+  return impl_.run_one();
 }
 
 io_context::count_type io_context::poll()
 {
-  asio::error_code ec;
-  count_type s = impl_.poll(ec);
-  asio::detail::throw_error(ec);
-  return s;
+  return impl_.poll();
 }
 
 io_context::count_type io_context::poll_one()
 {
-  asio::error_code ec;
-  count_type s = impl_.poll_one(ec);
-  asio::detail::throw_error(ec);
-  return s;
+  return impl_.poll_one();
 }
 
 void io_context::stop()
@@ -120,6 +108,7 @@ void io_context::service::notify_fork(io_context::fork_event)
 {
 }
 
+ASIO_INLINE_NAMESPACE_END
 } // namespace asio
 
 #include "asio/detail/pop_options.hpp"

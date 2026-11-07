@@ -2,7 +2,7 @@
 // impl/buffered_read_stream.hpp
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //
-// Copyright (c) 2003-2025 Christopher M. Kohlhoff (chris at kohlhoff dot com)
+// Copyright (c) 2003-2026 Christopher M. Kohlhoff (chris at kohlhoff dot com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -20,10 +20,12 @@
 #include "asio/detail/handler_type_requirements.hpp"
 #include "asio/detail/non_const_lvalue.hpp"
 #include "asio/detail/type_traits.hpp"
+#include "asio/error.hpp"
 
 #include "asio/detail/push_options.hpp"
 
 namespace asio {
+ASIO_INLINE_NAMESPACE_BEGIN
 
 template <typename Stream>
 std::size_t buffered_read_stream<Stream>::fill()
@@ -68,19 +70,11 @@ namespace detail
     {
     }
 
-    buffered_fill_handler(const buffered_fill_handler& other)
-      : storage_(other.storage_),
-        previous_size_(other.previous_size_),
-        handler_(other.handler_)
-    {
-    }
+    buffered_fill_handler(const buffered_fill_handler& other) = default;
+    buffered_fill_handler(buffered_fill_handler&& other) = default;
 
-    buffered_fill_handler(buffered_fill_handler&& other)
-      : storage_(other.storage_),
-        previous_size_(other.previous_size_),
-        handler_(static_cast<ReadHandler&&>(other.handler_))
-    {
-    }
+    buffered_fill_handler& operator=(const buffered_fill_handler&) = delete;
+    buffered_fill_handler& operator=(buffered_fill_handler&&) = delete;
 
     void operator()(const asio::error_code& ec,
         const std::size_t bytes_transferred)
@@ -99,7 +93,7 @@ namespace detail
   inline bool asio_handler_is_continuation(
       buffered_fill_handler<ReadHandler>* this_handler)
   {
-    return asio_handler_cont_helpers::is_continuation(
+    return ASIO_VERSIONED_NAME(handler_cont_helpers)::is_continuation(
           this_handler->handler_);
   }
 
@@ -207,7 +201,7 @@ template <typename MutableBufferSequence>
 std::size_t buffered_read_stream<Stream>::read_some(
     const MutableBufferSequence& buffers, asio::error_code& ec)
 {
-  ec = asio::error_code();
+  asio::error::clear(ec);
 
   using asio::buffer_size;
   if (buffer_size(buffers) == 0)
@@ -233,12 +227,8 @@ namespace detail
     {
     }
 
-    buffered_read_some_handler(const buffered_read_some_handler& other)
-      : storage_(other.storage_),
-        buffers_(other.buffers_),
-        handler_(other.handler_)
-    {
-    }
+    buffered_read_some_handler(
+        const buffered_read_some_handler& other) = default;
 
     buffered_read_some_handler(buffered_read_some_handler&& other)
       : storage_(other.storage_),
@@ -246,6 +236,11 @@ namespace detail
         handler_(static_cast<ReadHandler&&>(other.handler_))
     {
     }
+
+    buffered_read_some_handler& operator=(
+        const buffered_read_some_handler&) = delete;
+    buffered_read_some_handler& operator=(
+        buffered_read_some_handler&&) = delete;
 
     void operator()(const asio::error_code& ec, std::size_t)
     {
@@ -274,7 +269,7 @@ namespace detail
       buffered_read_some_handler<
         MutableBufferSequence, ReadHandler>* this_handler)
   {
-    return asio_handler_cont_helpers::is_continuation(
+    return ASIO_VERSIONED_NAME(handler_cont_helpers)::is_continuation(
           this_handler->handler_);
   }
 
@@ -391,12 +386,13 @@ template <typename MutableBufferSequence>
 std::size_t buffered_read_stream<Stream>::peek(
     const MutableBufferSequence& buffers, asio::error_code& ec)
 {
-  ec = asio::error_code();
+  asio::error::clear(ec);
   if (storage_.empty() && !this->fill(ec))
     return 0;
   return this->peek_copy(buffers);
 }
 
+ASIO_INLINE_NAMESPACE_END
 } // namespace asio
 
 #include "asio/detail/pop_options.hpp"

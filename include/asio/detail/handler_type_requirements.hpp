@@ -2,7 +2,7 @@
 // detail/handler_type_requirements.hpp
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //
-// Copyright (c) 2003-2025 Christopher M. Kohlhoff (chris at kohlhoff dot com)
+// Copyright (c) 2003-2026 Christopher M. Kohlhoff (chris at kohlhoff dot com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -54,6 +54,7 @@
 #endif // defined(ASIO_ENABLE_HANDLER_TYPE_REQUIREMENTS)
 
 namespace asio {
+ASIO_INLINE_NAMESPACE_BEGIN
 namespace detail {
 
 #if defined(ASIO_ENABLE_HANDLER_TYPE_REQUIREMENTS)
@@ -165,6 +166,60 @@ struct handler_type_requirements
           static_cast<const asio::error_code*>(0), \
           static_cast<const std::size_t*>(0))) == 1, \
       "WriteHandler type requirements not met") \
+  \
+  typedef asio::detail::handler_type_requirements< \
+      sizeof( \
+        asio::detail::argbyv( \
+          asio::detail::rvref< \
+            asio_true_handler_type>())) + \
+      sizeof( \
+        asio::detail::rorlvref< \
+          asio_true_handler_type>()( \
+            asio::detail::lvref<const asio::error_code>(), \
+            asio::detail::lvref<const std::size_t>()), \
+        char(0))> ASIO_UNUSED_TYPEDEF
+
+#define ASIO_READ_MULTI_HANDLER_CHECK( \
+    handler_type, handler) \
+  \
+  typedef ASIO_HANDLER_TYPE(handler_type, \
+      void(asio::error_code, std::size_t)) \
+    asio_true_handler_type; \
+  \
+  ASIO_HANDLER_TYPE_REQUIREMENTS_ASSERT( \
+      sizeof(asio::detail::two_arg_handler_test( \
+          asio::detail::rvref< \
+            asio_true_handler_type>(), \
+          static_cast<const asio::error_code*>(0), \
+          static_cast<const std::size_t*>(0))) == 1, \
+      "ReadMultiHandler type requirements not met") \
+  \
+  typedef asio::detail::handler_type_requirements< \
+      sizeof( \
+        asio::detail::argbyv( \
+          asio::detail::rvref< \
+            asio_true_handler_type>())) + \
+      sizeof( \
+        asio::detail::rorlvref< \
+          asio_true_handler_type>()( \
+            asio::detail::lvref<const asio::error_code>(), \
+            asio::detail::lvref<const std::size_t>()), \
+        char(0))> ASIO_UNUSED_TYPEDEF
+
+#define ASIO_WRITE_MULTI_HANDLER_CHECK( \
+    handler_type, handler) \
+  \
+  typedef ASIO_HANDLER_TYPE(handler_type, \
+      void(asio::error_code, std::size_t)) \
+    asio_true_handler_type; \
+  \
+  ASIO_HANDLER_TYPE_REQUIREMENTS_ASSERT( \
+      sizeof(asio::detail::two_arg_handler_test( \
+          asio::detail::rvref< \
+            asio_true_handler_type>(), \
+          static_cast<const asio::error_code*>(0), \
+          static_cast<const std::size_t*>(0))) == 1, \
+      "WriteMultiHandler type requirements not met") \
   \
   typedef asio::detail::handler_type_requirements< \
       sizeof( \
@@ -479,6 +534,14 @@ struct handler_type_requirements
     handler_type, handler) \
   typedef int ASIO_UNUSED_TYPEDEF
 
+#define ASIO_READ_MULTI_HANDLER_CHECK( \
+    handler_type, handler) \
+  typedef int ASIO_UNUSED_TYPEDEF
+
+#define ASIO_WRITE_MULTI_HANDLER_CHECK( \
+    handler_type, handler) \
+  typedef int ASIO_UNUSED_TYPEDEF
+
 #define ASIO_ACCEPT_HANDLER_CHECK( \
     handler_type, handler) \
   typedef int ASIO_UNUSED_TYPEDEF
@@ -526,6 +589,7 @@ struct handler_type_requirements
 #endif // !defined(ASIO_ENABLE_HANDLER_TYPE_REQUIREMENTS)
 
 } // namespace detail
+ASIO_INLINE_NAMESPACE_END
 } // namespace asio
 
 #endif // ASIO_DETAIL_HANDLER_TYPE_REQUIREMENTS_HPP

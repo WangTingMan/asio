@@ -2,7 +2,7 @@
 // basic_raw_socket.hpp
 // ~~~~~~~~~~~~~~~~~~~~
 //
-// Copyright (c) 2003-2025 Christopher M. Kohlhoff (chris at kohlhoff dot com)
+// Copyright (c) 2003-2026 Christopher M. Kohlhoff (chris at kohlhoff dot com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -27,6 +27,7 @@
 #include "asio/detail/push_options.hpp"
 
 namespace asio {
+ASIO_INLINE_NAMESPACE_BEGIN
 
 #if !defined(ASIO_BASIC_RAW_SOCKET_FWD_DECL)
 #define ASIO_BASIC_RAW_SOCKET_FWD_DECL
@@ -478,7 +479,7 @@ public:
           declval<initiate_async_send>(), token,
           buffers, socket_base::message_flags(0)))
   {
-    return async_initiate<WriteToken,
+    ASIO_INVOKE_INLINE return async_initiate<WriteToken,
       void (asio::error_code, std::size_t)>(
         initiate_async_send(this), token,
         buffers, socket_base::message_flags(0));
@@ -539,7 +540,7 @@ public:
         void (asio::error_code, std::size_t)>(
           declval<initiate_async_send>(), token, buffers, flags))
   {
-    return async_initiate<WriteToken,
+    ASIO_INVOKE_INLINE return async_initiate<WriteToken,
       void (asio::error_code, std::size_t)>(
         initiate_async_send(this), token, buffers, flags);
   }
@@ -562,7 +563,7 @@ public:
    * To send a single data buffer use the @ref buffer function as follows:
    * @code
    * asio::ip::udp::endpoint destination(
-   *     asio::ip::address::from_string("1.2.3.4"), 12345);
+   *     asio::ip::make_address("1.2.3.4"), 12345);
    * socket.send_to(asio::buffer(data, size), destination);
    * @endcode
    * See the @ref buffer documentation for information on sending multiple
@@ -667,7 +668,7 @@ public:
    * To send a single data buffer use the @ref buffer function as follows:
    * @code
    * asio::ip::udp::endpoint destination(
-   *     asio::ip::address::from_string("1.2.3.4"), 12345);
+   *     asio::ip::make_address("1.2.3.4"), 12345);
    * socket.async_send_to(
    *     asio::buffer(data, size), destination, handler);
    * @endcode
@@ -697,7 +698,7 @@ public:
           declval<initiate_async_send_to>(), token, buffers,
           destination, socket_base::message_flags(0)))
   {
-    return async_initiate<WriteToken,
+    ASIO_INVOKE_INLINE return async_initiate<WriteToken,
       void (asio::error_code, std::size_t)>(
         initiate_async_send_to(this), token, buffers,
         destination, socket_base::message_flags(0));
@@ -758,7 +759,7 @@ public:
           declval<initiate_async_send_to>(), token,
           buffers, destination, flags))
   {
-    return async_initiate<WriteToken,
+    ASIO_INVOKE_INLINE return async_initiate<WriteToken,
       void (asio::error_code, std::size_t)>(
         initiate_async_send_to(this), token,
         buffers, destination, flags);
@@ -916,7 +917,7 @@ public:
           declval<initiate_async_receive>(), token,
           buffers, socket_base::message_flags(0)))
   {
-    return async_initiate<ReadToken,
+    ASIO_INVOKE_INLINE return async_initiate<ReadToken,
       void (asio::error_code, std::size_t)>(
         initiate_async_receive(this), token,
         buffers, socket_base::message_flags(0));
@@ -978,7 +979,7 @@ public:
         void (asio::error_code, std::size_t)>(
           declval<initiate_async_receive>(), token, buffers, flags))
   {
-    return async_initiate<ReadToken,
+    ASIO_INVOKE_INLINE return async_initiate<ReadToken,
       void (asio::error_code, std::size_t)>(
         initiate_async_receive(this), token, buffers, flags);
   }
@@ -1137,7 +1138,7 @@ public:
           declval<initiate_async_receive_from>(), token, buffers,
           &sender_endpoint, socket_base::message_flags(0)))
   {
-    return async_initiate<ReadToken,
+    ASIO_INVOKE_INLINE return async_initiate<ReadToken,
       void (asio::error_code, std::size_t)>(
         initiate_async_receive_from(this), token, buffers,
         &sender_endpoint, socket_base::message_flags(0));
@@ -1201,7 +1202,7 @@ public:
           declval<initiate_async_receive_from>(), token,
           buffers, &sender_endpoint, flags))
   {
-    return async_initiate<ReadToken,
+    ASIO_INVOKE_INLINE return async_initiate<ReadToken,
       void (asio::error_code, std::size_t)>(
         initiate_async_receive_from(this), token,
         buffers, &sender_endpoint, flags);
@@ -1237,7 +1238,7 @@ private:
       ASIO_WRITE_HANDLER_CHECK(WriteHandler, handler) type_check;
 
       detail::non_const_lvalue<WriteHandler> handler2(handler);
-      self_->impl_.get_service().async_send(
+      ASIO_INVOKE_INLINE self_->impl_.get_service().async_send(
           self_->impl_.get_implementation(), buffers, flags,
           handler2.value, self_->impl_.get_executor());
     }
@@ -1271,7 +1272,7 @@ private:
       ASIO_WRITE_HANDLER_CHECK(WriteHandler, handler) type_check;
 
       detail::non_const_lvalue<WriteHandler> handler2(handler);
-      self_->impl_.get_service().async_send_to(
+      ASIO_INVOKE_INLINE self_->impl_.get_service().async_send_to(
           self_->impl_.get_implementation(), buffers, destination,
           flags, handler2.value, self_->impl_.get_executor());
     }
@@ -1305,7 +1306,7 @@ private:
       ASIO_READ_HANDLER_CHECK(ReadHandler, handler) type_check;
 
       detail::non_const_lvalue<ReadHandler> handler2(handler);
-      self_->impl_.get_service().async_receive(
+      ASIO_INVOKE_INLINE self_->impl_.get_service().async_receive(
           self_->impl_.get_implementation(), buffers, flags,
           handler2.value, self_->impl_.get_executor());
     }
@@ -1339,7 +1340,7 @@ private:
       ASIO_READ_HANDLER_CHECK(ReadHandler, handler) type_check;
 
       detail::non_const_lvalue<ReadHandler> handler2(handler);
-      self_->impl_.get_service().async_receive_from(
+      ASIO_INVOKE_INLINE self_->impl_.get_service().async_receive_from(
           self_->impl_.get_implementation(), buffers, *sender_endpoint,
           flags, handler2.value, self_->impl_.get_executor());
     }
@@ -1349,6 +1350,7 @@ private:
   };
 };
 
+ASIO_INLINE_NAMESPACE_END
 } // namespace asio
 
 #include "asio/detail/pop_options.hpp"

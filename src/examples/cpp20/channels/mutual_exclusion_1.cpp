@@ -2,14 +2,14 @@
 // mutual_exclusion_1.cpp
 // ~~~~~~~~~~~~~~~~~~~~~~
 //
-// Copyright (c) 2003-2025 Christopher M. Kohlhoff (chris at kohlhoff dot com)
+// Copyright (c) 2003-2026 Christopher M. Kohlhoff (chris at kohlhoff dot com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 //
 
 #include <asio.hpp>
-#include <asio/experimental/channel.hpp>
+#include <asio/channel.hpp>
 #include <iostream>
 #include <memory>
 
@@ -18,7 +18,7 @@ using asio::awaitable;
 using asio::dynamic_buffer;
 using asio::co_spawn;
 using asio::detached;
-using asio::experimental::channel;
+using asio::channel;
 using asio::io_context;
 using asio::ip::tcp;
 using asio::steady_timer;

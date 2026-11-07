@@ -40,7 +40,7 @@ sub source_contains_asio_thread_usage
       close($input);
       return 1;
     }
-    elsif ($line =~ /^ *thread /)
+    elsif ($line =~ /^ *thread / && $line !~ /^ *thread =/)
     {
       close($input);
       return 1;
@@ -131,13 +131,15 @@ sub copy_source_file
       $line =~ s/[\\@]ref async_read/boost::asio::async_read()/g;
       $line =~ s/[\\@]ref async_write/boost::asio::async_write()/g;
     }
-    if ($line =~ /asio_detail_posix_thread_function/)
+    # The global names tagged by ASIO_VERSIONED_NAME are built by token
+    # pasting, so the prefix is only ever written in the macro itself.
+    if ($line =~ /asio_ ## name/)
     {
-      $line =~ s/asio_detail_posix_thread_function/boost_asio_detail_posix_thread_function/g;
+      $line =~ s/asio_ ## name/boost_asio_ ## name/g;
     }
-    if ($line =~ /asio_signal_handler/)
+    if ($line =~ /CAT\(asio_,/)
     {
-      $line =~ s/asio_signal_handler/boost_asio_signal_handler/g;
+      $line =~ s/CAT\(asio_,/CAT(boost_asio_,/g;
     }
     if ($line =~ /ASIO_/ && !($line =~ /BOOST_ASIO_/))
     {
@@ -164,6 +166,7 @@ sub copy_source_file
       $line =~ s/include\/asio/boost\/asio/g;
       $line =~ s/\^asio/^boost\/asio/g;
       $line =~ s/namespaceasio/namespaceboost_1_1asio/g;
+      $line =~ s/classasio/classboost_1_1asio/g;
       $line =~ s/ \(\[\@examples\/diffs.*$//;
       $line =~ s/boost\/tools\/boostbook/tools\/boostbook/g;
     }
@@ -273,7 +276,7 @@ sub copy_source_file
       }
       print_line($output, $line, $from, $lineno);
     }
-    elsif ($line =~ /^( *)thread( .*)$/ && !$is_qbk)
+    elsif ($line =~ /^( *)thread( .*)$/ && !$is_qbk && $line !~ /^ *thread =/)
     {
       if ($is_test)
       {
@@ -323,31 +326,6 @@ sub copy_source_file
     elsif ($line =~ /using namespace asio/)
     {
       $line =~ s/using namespace asio/using namespace boost::asio/g;
-      print_line($output, $line, $from, $lineno);
-    }
-    elsif ($line =~ /asio_handler_alloc_helpers/)
-    {
-      $line =~ s/asio_handler_alloc_helpers/boost_asio_handler_alloc_helpers/g;
-      print_line($output, $line, $from, $lineno);
-    }
-    elsif ($line =~ /asio_handler_cont_helpers/)
-    {
-      $line =~ s/asio_handler_cont_helpers/boost_asio_handler_cont_helpers/g;
-      print_line($output, $line, $from, $lineno);
-    }
-    elsif ($line =~ /asio_handler_invoke_helpers/)
-    {
-      $line =~ s/asio_handler_invoke_helpers/boost_asio_handler_invoke_helpers/g;
-      print_line($output, $line, $from, $lineno);
-    }
-    elsif ($line =~ /asio_(prefer|query|require|require_concept)_fn/)
-    {
-      $line =~ s/asio_(prefer|query|require|require_concept)_fn/boost_asio_$1_fn/g;
-      print_line($output, $line, $from, $lineno);
-    }
-    elsif ($line =~ /asio_execution_/ && !($line =~ /_is_unspecialised/))
-    {
-      $line =~ s/asio_execution_/boost_asio_execution_/g;
       print_line($output, $line, $from, $lineno);
     }
     elsif ($line =~ /[\\@]ref boost_bind/)
@@ -518,6 +496,280 @@ sub copy_unit_tests
   }
 }
 
+sub unit_test_is_runnable
+{
+  my ($from) = @_;
+
+  # Open the input file.
+  open(my $input, "<$from") or die("Can't open $from for reading");
+
+  # Tests with only null or compile test cases are linked, not run.
+  while (my $line = <$input>)
+  {
+    while ($line =~ /ASIO_TEST_CASE[0-9]?\s*\(([^)]*)\)/g)
+    {
+      foreach my $test (split(/,/, $1))
+      {
+        $test =~ s/^\s+|\s+$//g;
+        if ($test ne "null_test")
+        {
+          close($input);
+          return 1;
+        }
+      }
+    }
+  }
+
+  close($input);
+  return 0;
+}
+
+sub print_jamfile_rule
+{
+  my ($output, $rule, @fields) = @_;
+
+  # Omit trailing empty fields, and separate the rest with colons.
+  while (@fields and $fields[-1] eq "")
+  {
+    pop(@fields);
+  }
+  my $line = "  [ $rule " . shift(@fields);
+  foreach my $field (@fields)
+  {
+    $line .= " :";
+    $line .= " $field" if $field ne "";
+  }
+  print($output "$line ]\n");
+}
+
+sub copyright_years
+{
+  my $copyright_years = "2003";
+  open(my $asio_hpp, "<include/asio.hpp")
+    or die("Can't open include/asio.hpp for reading");
+  while (my $line = <$asio_hpp>)
+  {
+    if ($line =~ /Copyright \(c\) ([0-9-]+) Christopher M\. Kohlhoff/)
+    {
+      $copyright_years = $1;
+      last;
+    }
+  }
+  close($asio_hpp);
+  return $copyright_years;
+}
+
+sub create_unit_test_jamfile
+{
+  # Tests in the execution directory have their own Jamfile. Those in the
+  # experimental and ssl directories have their own Jamfiles in the Boost
+  # repository.
+  my @dirs = (
+      "src/tests/unit",
+      "src/tests/unit/generic",
+      "src/tests/unit/ip",
+      "src/tests/unit/local",
+      "src/tests/unit/posix",
+      "src/tests/unit/ts",
+      "src/tests/unit/windows");
+
+  # Tests that are not also built using the select-based reactor.
+  my %no_select_variant = (
+      "fwd_first" => 1,
+      "fwd_last" => 1);
+
+  # Additional requirements for individual tests.
+  my %requirements = (
+      "trampoline" => "<toolset>msvc:<cxxflags>/bigobj");
+
+  # Use the same copyright years as the headers.
+  my $copyright_years = copyright_years();
+
+  # Find the unit tests.
+  my @files;
+  foreach my $dir (@dirs)
+  {
+    foreach my $file (glob("$dir/*.cpp"))
+    {
+      if ($file ne "src/tests/unit/thread.cpp"
+          and $file ne "src/tests/unit/error_handler.cpp"
+          and $file ne "src/tests/unit/unit_test.cpp")
+      {
+        push(@files, $file);
+      }
+    }
+  }
+
+  # Open the output file.
+  our $boost_dir;
+  my $to = "$boost_dir/libs/asio/test/Jamfile.v2";
+  open(my $output, ">$to") or die("Can't open $to for writing");
+
+  # Write the header.
+  print($output <<"EOF");
+#
+# Copyright (c) $copyright_years Christopher M. Kohlhoff (chris at kohlhoff dot com)
+#
+# Distributed under the Boost Software License, Version 1.0. (See accompanying
+# file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
+#
+
+import feature ;
+
+lib socket ; # SOLARIS, QNXNTO
+lib nsl ; # SOLARIS
+lib ws2_32 ; # NT
+lib mswsock ; # NT
+lib ipv6 ; # HPUX
+lib network ; # HAIKU
+
+local USE_SELECT =
+  <define>BOOST_ASIO_DISABLE_DEV_POLL
+  <define>BOOST_ASIO_DISABLE_EPOLL
+  <define>BOOST_ASIO_DISABLE_KQUEUE
+  <define>BOOST_ASIO_DISABLE_IOCP
+  ;
+
+project
+  : requirements
+    <library>/boost/asio//boost_asio
+    <library>/boost/chrono//boost_chrono
+    <library>/boost/context//boost_context
+    <library>/boost/regex//boost_regex
+    <define>BOOST_ALL_NO_LIB=1
+    <define>BOOST_ASIO_DISABLE_DEPRECATED_MSG=1
+    <threading>multi
+    <target-os>linux:<define>_XOPEN_SOURCE=600
+    <target-os>linux:<define>_GNU_SOURCE=1
+    <target-os>solaris:<define>_XOPEN_SOURCE=500
+    <target-os>solaris:<define>__EXTENSIONS__
+    <target-os>solaris:<library>socket
+    <target-os>solaris:<library>nsl
+    <target-os>windows:<define>_WIN32_WINNT=0x0601
+    <target-os>windows,<toolset>cw:<library>ws2_32
+    <target-os>windows,<toolset>cw:<library>mswsock
+    <target-os>windows,<toolset>gcc:<library>ws2_32
+    <target-os>windows,<toolset>gcc:<library>mswsock
+    <target-os>windows,<toolset>gcc-cygwin:<define>__USE_W32_SOCKETS
+    <target-os>hpux,<toolset>gcc:<define>_XOPEN_SOURCE_EXTENDED
+    <target-os>hpux:<library>ipv6
+    <target-os>qnxnto:<library>socket
+    <target-os>haiku:<library>network
+  ;
+
+test-suite "asio" :
+EOF
+
+  # Write the rules for each test.
+  foreach my $file (sort(@files))
+  {
+    my $source = $file;
+    $source =~ s/^src\/tests\/unit\///;
+    my $name = $source;
+    $name =~ s/\.cpp$//;
+    my $in_subdir = ($name =~ /\//);
+    $name =~ s/\//_/g;
+    my $req = "";
+    if (exists($requirements{$name}))
+    {
+      $req = $requirements{$name};
+    }
+    my $select_req = $req eq "" ? "\$(USE_SELECT)" : "\$(USE_SELECT) $req";
+
+    # A run rule has argument and input file fields before the requirements.
+    my $rule = "link";
+    my @skip = ();
+    if (unit_test_is_runnable($file))
+    {
+      $rule = "run";
+      @skip = ("", "");
+    }
+
+    # Targets in subdirectories need an explicit name to keep them unique.
+    print_jamfile_rule($output, $rule, $source, @skip,
+        $req, $in_subdir ? $name : "");
+    if (!$no_select_variant{$name})
+    {
+      print_jamfile_rule($output, $rule, $source, @skip,
+          $select_req, "${name}_select");
+    }
+  }
+
+  # Write the trailer.
+  print($output "  ;\n\nbuild-project execution ;\n");
+  close($output);
+}
+
+sub create_execution_test_jamfile
+{
+  # Use the same copyright years as the headers.
+  my $copyright_years = copyright_years();
+
+  # Open the output file.
+  our $boost_dir;
+  my $to = "$boost_dir/libs/asio/test/execution/Jamfile.v2";
+  open(my $output, ">$to") or die("Can't open $to for writing");
+
+  # Write the header.
+  print($output <<"EOF");
+#
+# Copyright (c) $copyright_years Christopher M. Kohlhoff (chris at kohlhoff dot com)
+#
+# Distributed under the Boost Software License, Version 1.0. (See accompanying
+# file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
+#
+
+import feature ;
+
+lib socket ; # SOLARIS, QNXNTO
+lib nsl ; # SOLARIS
+lib ws2_32 ; # NT
+lib mswsock ; # NT
+lib ipv6 ; # HPUX
+lib network ; # HAIKU
+
+project
+  : requirements
+    <library>/boost/date_time//boost_date_time
+    <library>/boost/system//boost_system
+    <library>/boost/chrono//boost_chrono
+    <library>/boost/regex//boost_regex
+    <define>BOOST_ALL_NO_LIB=1
+    <threading>multi
+    <target-os>linux:<define>_XOPEN_SOURCE=600
+    <target-os>linux:<define>_GNU_SOURCE=1
+    <target-os>solaris:<define>_XOPEN_SOURCE=500
+    <target-os>solaris:<define>__EXTENSIONS__
+    <target-os>solaris:<library>socket
+    <target-os>solaris:<library>nsl
+    <target-os>windows:<define>_WIN32_WINNT=0x0501
+    <target-os>windows,<toolset>cw:<library>ws2_32
+    <target-os>windows,<toolset>cw:<library>mswsock
+    <target-os>windows,<toolset>gcc:<library>ws2_32
+    <target-os>windows,<toolset>gcc:<library>mswsock
+    <target-os>windows,<toolset>gcc-cygwin:<define>__USE_W32_SOCKETS
+    <target-os>hpux,<toolset>gcc:<define>_XOPEN_SOURCE_EXTENDED
+    <target-os>hpux:<library>ipv6
+    <target-os>qnxnto:<library>socket
+    <target-os>haiku:<library>network
+  ;
+
+test-suite "asio" :
+EOF
+
+  # Write the rules for each test.
+  foreach my $file (sort(glob("src/tests/unit/execution/*.cpp")))
+  {
+    my $source = $file;
+    $source =~ s/^src\/tests\/unit\/execution\///;
+    print($output "  [ run $source ]\n");
+  }
+
+  # Write the trailer.
+  print($output "  ;\n");
+  close($output);
+}
+
 sub copy_latency_tests
 {
   my @dirs = (
@@ -565,6 +817,7 @@ sub copy_examples
       "src/examples/cpp11/buffers",
       "src/examples/cpp11/chat",
       "src/examples/cpp11/deferred",
+      "src/examples/cpp11/eager",
       "src/examples/cpp11/echo",
       "src/examples/cpp11/executors",
       "src/examples/cpp11/files",
@@ -617,6 +870,7 @@ sub copy_examples
       "src/examples/cpp17/coroutines_ts",
       "src/examples/cpp20/channels",
       "src/examples/cpp20/coroutines",
+      "src/examples/cpp20/eager",
       "src/examples/cpp20/invocation",
       "src/examples/cpp20/operations",
       "src/examples/cpp20/type_erasure");
@@ -690,6 +944,8 @@ if (not $includes_only)
 {
   create_lib_directory();
   copy_unit_tests();
+  create_unit_test_jamfile();
+  create_execution_test_jamfile();
   copy_latency_tests();
   copy_properties_tests();
   copy_examples();

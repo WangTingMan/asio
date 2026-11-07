@@ -2,7 +2,7 @@
 // detail/win_iocp_file_service.hpp
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //
-// Copyright (c) 2003-2025 Christopher M. Kohlhoff (chris at kohlhoff dot com)
+// Copyright (c) 2003-2026 Christopher M. Kohlhoff (chris at kohlhoff dot com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -20,6 +20,7 @@
 #if defined(ASIO_HAS_IOCP) && defined(ASIO_HAS_FILE)
 
 #include <string>
+#include "asio/detail/buffer_sequence_adapter.hpp"
 #include "asio/detail/cstdint.hpp"
 #include "asio/detail/win_iocp_handle_service.hpp"
 #include "asio/error.hpp"
@@ -29,6 +30,7 @@
 #include "asio/detail/push_options.hpp"
 
 namespace asio {
+ASIO_INLINE_NAMESPACE_BEGIN
 namespace detail {
 
 // Extend win_iocp_handle_service to provide file support.
@@ -169,9 +171,10 @@ public:
   size_t write_some(implementation_type& impl,
       const ConstBufferSequence& buffers, asio::error_code& ec)
   {
-    uint64_t offset = impl.offset_;
-    impl.offset_ += asio::buffer_size(buffers);
-    return handle_service_.write_some_at(impl, offset, buffers, ec);
+    size_t n = handle_service_.write_some_at(
+        impl, impl.offset_, buffers, ec);
+    impl.offset_ += n;
+    return n;
   }
 
   // Start an asynchronous write. The data being written must be valid for the
@@ -181,8 +184,11 @@ public:
       const ConstBufferSequence& buffers,
       Handler& handler, const IoExecutor& io_ex)
   {
+    // Only the first non-empty buffer is submitted.
     uint64_t offset = impl.offset_;
-    impl.offset_ += asio::buffer_size(buffers);
+    impl.offset_ += win_iocp_handle_service::transfer_size(
+        buffer_sequence_adapter<asio::const_buffer,
+          ConstBufferSequence>::first(buffers).size());
     handle_service_.async_write_some_at(impl, offset, buffers, handler, io_ex);
   }
 
@@ -210,9 +216,10 @@ public:
   size_t read_some(implementation_type& impl,
       const MutableBufferSequence& buffers, asio::error_code& ec)
   {
-    uint64_t offset = impl.offset_;
-    impl.offset_ += asio::buffer_size(buffers);
-    return handle_service_.read_some_at(impl, offset, buffers, ec);
+    size_t n = handle_service_.read_some_at(
+        impl, impl.offset_, buffers, ec);
+    impl.offset_ += n;
+    return n;
   }
 
   // Start an asynchronous read. The buffer for the data being read must be
@@ -223,8 +230,11 @@ public:
       const MutableBufferSequence& buffers,
       Handler& handler, const IoExecutor& io_ex)
   {
+    // Only the first non-empty buffer is submitted.
     uint64_t offset = impl.offset_;
-    impl.offset_ += asio::buffer_size(buffers);
+    impl.offset_ += win_iocp_handle_service::transfer_size(
+        buffer_sequence_adapter<asio::mutable_buffer,
+          MutableBufferSequence>::first(buffers).size());
     handle_service_.async_read_some_at(impl, offset, buffers, handler, io_ex);
   }
 
@@ -274,6 +284,7 @@ private:
 };
 
 } // namespace detail
+ASIO_INLINE_NAMESPACE_END
 } // namespace asio
 
 #include "asio/detail/pop_options.hpp"

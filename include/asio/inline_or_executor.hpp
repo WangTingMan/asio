@@ -2,7 +2,7 @@
 // inline_or_executor.hpp
 // ~~~~~~~~~~~~~~~~~~~~~~
 //
-// Copyright (c) 2003-2025 Christopher M. Kohlhoff (chris at kohlhoff dot com)
+// Copyright (c) 2003-2026 Christopher M. Kohlhoff (chris at kohlhoff dot com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -16,6 +16,8 @@
 #endif // defined(_MSC_VER) && (_MSC_VER >= 1200)
 
 #include "asio/detail/config.hpp"
+#include <exception>
+#include "asio/detail/native_executors.hpp"
 #include "asio/detail/non_const_lvalue.hpp"
 #include "asio/detail/type_traits.hpp"
 #include "asio/execution/blocking.hpp"
@@ -27,13 +29,15 @@
 #include "asio/detail/push_options.hpp"
 
 namespace asio {
+ASIO_INLINE_NAMESPACE_BEGIN
 
 /// Adapts an executor to add inline invocation of the submitted function.
 /**
- * The @inline_or_executor class template adapts an existing executor such that:
+ * The @c inline_or_executor class template adapts an existing executor such
+ * that:
  *
  * @li posted function objects (or when the @c blocking property is set to
- *     @c blocking.never) are submitted to the wrapped executor; and
+ * @c blocking.never) are submitted to the wrapped executor; and
  *
  * @li dispatched function objects (or when @c blocking is @c blocking.always or
  * @c blocking.possibly) are executed inline.
@@ -83,7 +87,7 @@ public:
    * This constructor is only valid if the @c OtherExecutor type is convertible
    * to @c Executor.
    */
-  template <class OtherExecutor>
+  template <typename OtherExecutor>
   inline_or_executor(
       const inline_or_executor<OtherExecutor>& other) noexcept
     : executor_(other.executor_)
@@ -102,7 +106,7 @@ public:
    * This assignment operator is only valid if the @c OtherExecutor type is
    * convertible to @c Executor.
    */
-  template <class OtherExecutor>
+  template <typename OtherExecutor>
   inline_or_executor& operator=(
       const inline_or_executor<OtherExecutor>& other) noexcept
   {
@@ -121,7 +125,7 @@ public:
    * This constructor is only valid if the @c OtherExecutor type is convertible
    * to @c Executor.
    */
-  template <class OtherExecutor>
+  template <typename OtherExecutor>
   inline_or_executor(inline_or_executor<OtherExecutor>&& other) noexcept
     : executor_(static_cast<OtherExecutor&&>(other.executor_))
   {
@@ -139,7 +143,7 @@ public:
    * This assignment operator is only valid if the @c OtherExecutor type is
    * convertible to @c Executor.
    */
-  template <class OtherExecutor>
+  template <typename OtherExecutor>
   inline_or_executor& operator=(
       inline_or_executor<OtherExecutor>&& other) noexcept
   {
@@ -158,66 +162,37 @@ public:
     return executor_;
   }
 
-  /// Query the current value of the @c blocking property.
-  /**
-   * Do not call this function directly. It is intended for use with the
-   * asio::query customisation point.
-   *
-   * For example:
-   * @code asio::inline_or_executor<my_executor_type> ex = ...;
-   * if (asio::query(ex, asio::execution::blocking)
-   *     == asio::execution::blocking.possibly)
-   *   ... @endcode
-   */
-  static constexpr execution::blocking_t query(execution::blocking_t) noexcept
+#if !defined(ASIO_NO_TS_EXECUTORS)
+  /// Obtain the underlying execution context.
+  execution_context& context() const noexcept
   {
-    return Blocking();
+    return executor_.context();
   }
 
-  /// Query the current value of the @c inline_exception_handling property.
+  /// Inform the inline_or_executor that it has some outstanding work to do.
   /**
-   * Do not call this function directly. It is intended for use with the
-   * asio::query customisation point.
-   *
-   * For example:
-   * @code asio::inline_or_executor<my_executor_type> ex = ...;
-   * if (asio::query(ex,
-   *       asio::execution::inline_exception_handling)
-   *     == asio::execution::inline_exception_handling.propagate)
-   *   ... @endcode
+   * The inline_or_executor delegates this call to its underlying executor.
    */
-  static constexpr execution::inline_exception_handling_t query(
-      execution::inline_exception_handling_t) noexcept
+  void on_work_started() const noexcept
   {
-    return InlineExceptionHandling();
+    executor_.on_work_started();
   }
 
-  /// Forward a query to the underlying executor.
+  /// Inform the inline_or_executor that some work is no longer outstanding.
   /**
-   * Do not call this function directly. It is intended for use with the
-   * asio::query customisation point.
-   *
-   * For example:
-   * @code asio::inline_or_executor<my_executor_type> ex = ...;
-   * if (asio::query(ex, asio::execution::blocking)
-   *       == asio::execution::blocking.never)
-   *   ... @endcode
+   * The inline_or_executor delegates this call to its underlying executor.
    */
-  template <typename Property>
-  query_result_t<const Executor&, Property> query(const Property& p,
-      constraint_t<
-        can_query<const Executor&, Property>::value
-      > = 0,
-      constraint_t<
-        !is_convertible<Property, execution::blocking_t>::value
-      > = 0,
-      constraint_t<
-        !is_convertible<Property, execution::inline_exception_handling_t>::value
-      > = 0) const
-    noexcept(is_nothrow_query<const Executor&, Property>::value)
+  void on_work_finished() const noexcept
   {
-    return asio::query(executor_, p);
+    executor_.on_work_finished();
   }
+#endif // !defined(ASIO_NO_TS_EXECUTORS)
+
+#if !defined(GENERATING_DOCUMENTATION)
+private:
+  friend struct ASIO_VERSIONED_NAME(require_fn)::impl;
+  friend struct ASIO_VERSIONED_NAME(prefer_fn)::impl;
+#endif // !defined(GENERATING_DOCUMENTATION)
 
   /// Obtain an executor with the @c blocking.possibly property.
   /**
@@ -361,6 +336,9 @@ public:
         can_prefer<const Executor&, Property>::value
       > = 0,
       constraint_t<
+        !is_identity_prefer<const Executor&, Property>::value
+      > = 0,
+      constraint_t<
         !is_convertible<Property, execution::blocking_t>::value
       > = 0,
       constraint_t<
@@ -373,32 +351,75 @@ public:
         Blocking, InlineExceptionHandling>(asio::prefer(executor_, p));
   }
 
-#if !defined(ASIO_NO_TS_EXECUTORS)
-  /// Obtain the underlying execution context.
-  execution_context& context() const noexcept
-  {
-    return executor_.context();
-  }
+#if !defined(GENERATING_DOCUMENTATION)
+private:
+  friend struct ASIO_VERSIONED_NAME(query_fn)::impl;
+  friend struct asio::execution::detail::blocking_t<0>;
+  friend struct asio::execution::detail::inline_exception_handling_t<0>;
+#endif // !defined(GENERATING_DOCUMENTATION)
 
-  /// Inform the inline_or_executor that it has some outstanding work to do.
+  /// Query the current value of the @c blocking property.
   /**
-   * The inline_or_executor delegates this call to its underlying executor.
+   * Do not call this function directly. It is intended for use with the
+   * asio::query customisation point.
+   *
+   * For example:
+   * @code asio::inline_or_executor<my_executor_type> ex = ...;
+   * if (asio::query(ex, asio::execution::blocking)
+   *     == asio::execution::blocking.possibly)
+   *   ... @endcode
    */
-  void on_work_started() const noexcept
+  static constexpr execution::blocking_t query(execution::blocking_t) noexcept
   {
-    executor_.on_work_started();
+    return Blocking();
   }
 
-  /// Inform the inline_or_executor that some work is no longer outstanding.
+  /// Query the current value of the @c inline_exception_handling property.
   /**
-   * The inline_or_executor delegates this call to its underlying executor.
+   * Do not call this function directly. It is intended for use with the
+   * asio::query customisation point.
+   *
+   * For example:
+   * @code asio::inline_or_executor<my_executor_type> ex = ...;
+   * if (asio::query(ex,
+   *       asio::execution::inline_exception_handling)
+   *     == asio::execution::inline_exception_handling.propagate)
+   *   ... @endcode
    */
-  void on_work_finished() const noexcept
+  static constexpr execution::inline_exception_handling_t query(
+      execution::inline_exception_handling_t) noexcept
   {
-    executor_.on_work_finished();
+    return InlineExceptionHandling();
   }
-#endif // !defined(ASIO_NO_TS_EXECUTORS)
 
+  /// Forward a query to the underlying executor.
+  /**
+   * Do not call this function directly. It is intended for use with the
+   * asio::query customisation point.
+   *
+   * For example:
+   * @code asio::inline_or_executor<my_executor_type> ex = ...;
+   * if (asio::query(ex, asio::execution::blocking)
+   *       == asio::execution::blocking.never)
+   *   ... @endcode
+   */
+  template <typename Property>
+  query_result_t<const Executor&, Property> query(const Property& p,
+      constraint_t<
+        can_query<const Executor&, Property>::value
+      > = 0,
+      constraint_t<
+        !is_convertible<Property, execution::blocking_t>::value
+      > = 0,
+      constraint_t<
+        !is_convertible<Property, execution::inline_exception_handling_t>::value
+      > = 0) const
+    noexcept(is_nothrow_query<const Executor&, Property>::value)
+  {
+    return asio::query(executor_, p);
+  }
+
+public:
   /// Request the inline_or_executor to invoke the given function object.
   /**
    * This function is used to ask the inline_or_executor to execute the given
@@ -588,6 +609,39 @@ inline_or(ExecutionContext& ctx,
 
 #if !defined(GENERATING_DOCUMENTATION)
 
+namespace detail {
+
+template <typename Executor, typename Blocking,
+    typename InlineExceptionHandling>
+struct native_execute_kind<
+    inline_or_executor<Executor, Blocking, InlineExceptionHandling>>
+{
+  using type = conditional_t<
+      (is_same<Blocking, execution::blocking_t::always_t>::value
+          || is_same<Blocking, execution::blocking_t::possibly_t>::value)
+        && is_same<InlineExceptionHandling,
+          execution::inline_exception_handling_t::propagate_t>::value,
+      native_execute_kinds::native,
+      native_execute_kinds::none
+    >;
+};
+
+template <typename Executor, typename Blocking,
+    typename InlineExceptionHandling>
+struct native_outstanding_work_kind<
+    inline_or_executor<Executor, Blocking, InlineExceptionHandling>>
+{
+  using type = conditional_t<
+      is_same<
+        native_outstanding_work_kind_t<Executor>,
+        native_outstanding_work_kinds::native
+      >::value,
+      native_outstanding_work_kinds::native,
+      native_outstanding_work_kinds::none
+    >;
+};
+
+} // namespace detail
 namespace traits {
 
 #if !defined(ASIO_HAS_DEDUCED_EQUALITY_COMPARABLE_TRAIT)
@@ -792,6 +846,7 @@ struct prefer_member<
     inline_or_executor<Executor, Blocking, InlineExceptionHandling>, Property,
     enable_if_t<
       can_prefer<const Executor&, Property>::value
+        && !is_identity_prefer<const Executor&, Property>::value
         && !is_convertible<Property, execution::blocking_t::always_t>::value
     >
   >
@@ -810,6 +865,7 @@ struct prefer_member<
 
 #endif // !defined(GENERATING_DOCUMENTATION)
 
+ASIO_INLINE_NAMESPACE_END
 } // namespace asio
 
 #include "asio/detail/pop_options.hpp"

@@ -2,7 +2,7 @@
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
 
 <!--
-  Copyright (c) 2003-2025 Christopher M. Kohlhoff (chris at kohlhoff dot com)
+  Copyright (c) 2003-2026 Christopher M. Kohlhoff (chris at kohlhoff dot com)
 
   Distributed under the Boost Software License, Version 1.0. (See accompanying
   file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -30,7 +30,7 @@
 -->
 <xsl:template match="/doxygen">
 <xsl:text>[/
- / Copyright (c) 2003-2025 Christopher M. Kohlhoff (chris at kohlhoff dot com)
+ / Copyright (c) 2003-2026 Christopher M. Kohlhoff (chris at kohlhoff dot com)
  /
  / Distributed under the Boost Software License, Version 1.0. (See accompanying
  / file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -60,6 +60,7 @@
 [include requirements/ConnectHandler.qbk]
 [include requirements/ConnectToken.qbk]
 [include requirements/ConstBufferSequence.qbk]
+[include requirements/ConstBufferSequences.qbk]
 [include requirements/Disposition.qbk]
 [include requirements/DynamicBuffer.qbk]
 [include requirements/DynamicBuffer_v1.qbk]
@@ -81,12 +82,18 @@
 [include requirements/MoveAcceptHandler.qbk]
 [include requirements/MoveAcceptToken.qbk]
 [include requirements/MutableBufferSequence.qbk]
+[include requirements/MutableBufferSequences.qbk]
+[include requirements/MutableEndpointSequence.qbk]
+[include requirements/MutableFlagsSequence.qbk]
+[include requirements/MutableSizeSequence.qbk]
 [include requirements/NullaryToken.qbk]
 [include requirements/ProtoAllocator.qbk]
 [include requirements/Protocol.qbk]
 [include requirements/RangeConnectHandler.qbk]
 [include requirements/RangeConnectToken.qbk]
 [include requirements/ReadHandler.qbk]
+[include requirements/ReadMultiHandler.qbk]
+[include requirements/ReadMultiToken.qbk]
 [include requirements/ReadToken.qbk]
 [include requirements/ResolveHandler.qbk]
 [include requirements/ResolveToken.qbk]
@@ -106,6 +113,8 @@
 [include requirements/WaitToken.qbk]
 [include requirements/WaitTraits.qbk]
 [include requirements/WriteHandler.qbk]
+[include requirements/WriteMultiHandler.qbk]
+[include requirements/WriteMultiToken.qbk]
 [include requirements/WriteToken.qbk]
 
 </xsl:text>
@@ -126,6 +135,7 @@
             not(contains(compoundname, '_helper')) and
             not(contains(compoundname, 'std_allocator_void')) and
             not(contains(compoundname, 'thread_function')) and
+            not(contains(compoundname, '::carry_id')) and
             not(contains(compoundname, 'context_impl')) and
             not(contains(compoundname, 'initiate_')) and
             not(contains(compoundname, '_adapter')) and
@@ -545,6 +555,8 @@
       <xsl:apply-templates mode="markup"/>
     </xsl:when>
     <xsl:when test="@kind='see'">
+[heading See Also]
+      <xsl:apply-templates mode="markup"/>
     </xsl:when>
     <xsl:when test="@kind='note'">
 [heading Remarks]
@@ -744,6 +756,186 @@
       <xsl:value-of select="."/>
       <xsl:text>]</xsl:text>
     </xsl:when>
+    <xsl:when test="@refid = 'overview_strands'">
+      <xsl:text>[link asio.overview.core.strands </xsl:text>
+      <xsl:value-of select="."/>
+      <xsl:text>]</xsl:text>
+    </xsl:when>
+    <xsl:when test="@refid = 'overview_buffers'">
+      <xsl:text>[link asio.overview.core.buffers </xsl:text>
+      <xsl:value-of select="."/>
+      <xsl:text>]</xsl:text>
+    </xsl:when>
+    <xsl:when test="@refid = 'overview_streams'">
+      <xsl:text>[link asio.overview.core.streams </xsl:text>
+      <xsl:value-of select="."/>
+      <xsl:text>]</xsl:text>
+    </xsl:when>
+    <xsl:when test="@refid = 'overview_line_based'">
+      <xsl:text>[link asio.overview.core.line_based </xsl:text>
+      <xsl:value-of select="."/>
+      <xsl:text>]</xsl:text>
+    </xsl:when>
+    <xsl:when test="@refid = 'overview_allocation'">
+      <xsl:text>[link asio.overview.core.allocation </xsl:text>
+      <xsl:value-of select="."/>
+      <xsl:text>]</xsl:text>
+    </xsl:when>
+    <xsl:when test="@refid = 'overview_cancellation'">
+      <xsl:text>[link asio.overview.core.cancellation </xsl:text>
+      <xsl:value-of select="."/>
+      <xsl:text>]</xsl:text>
+    </xsl:when>
+    <xsl:when test="@refid = 'overview_configuration'">
+      <xsl:text>[link asio.overview.core.configuration </xsl:text>
+      <xsl:value-of select="."/>
+      <xsl:text>]</xsl:text>
+    </xsl:when>
+    <xsl:when test="@refid = 'overview_associators'">
+      <xsl:text>[link asio.overview.model.associators </xsl:text>
+      <xsl:value-of select="."/>
+      <xsl:text>]</xsl:text>
+    </xsl:when>
+    <xsl:when test="@refid = 'overview_coroutine'">
+      <xsl:text>[link asio.overview.composition.coroutine </xsl:text>
+      <xsl:value-of select="."/>
+      <xsl:text>]</xsl:text>
+    </xsl:when>
+    <xsl:when test="@refid = 'overview_spawn'">
+      <xsl:text>[link asio.overview.composition.spawn </xsl:text>
+      <xsl:value-of select="."/>
+      <xsl:text>]</xsl:text>
+    </xsl:when>
+    <xsl:when test="@refid = 'overview_futures'">
+      <xsl:text>[link asio.overview.composition.futures </xsl:text>
+      <xsl:value-of select="."/>
+      <xsl:text>]</xsl:text>
+    </xsl:when>
+    <xsl:when test="@refid = 'overview_cpp20_coroutines'">
+      <xsl:text>[link asio.overview.composition.cpp20_coroutines </xsl:text>
+      <xsl:value-of select="."/>
+      <xsl:text>]</xsl:text>
+    </xsl:when>
+    <xsl:when test="@refid = 'overview_coro'">
+      <xsl:text>[link asio.overview.composition.coro </xsl:text>
+      <xsl:value-of select="."/>
+      <xsl:text>]</xsl:text>
+    </xsl:when>
+    <xsl:when test="@refid = 'overview_deferred'">
+      <xsl:text>[link asio.overview.composition.deferred </xsl:text>
+      <xsl:value-of select="."/>
+      <xsl:text>]</xsl:text>
+    </xsl:when>
+    <xsl:when test="@refid = 'overview_eager'">
+      <xsl:text>[link asio.overview.composition.eager </xsl:text>
+      <xsl:value-of select="."/>
+      <xsl:text>]</xsl:text>
+    </xsl:when>
+    <xsl:when test="@refid = 'overview_promises'">
+      <xsl:text>[link asio.overview.composition.promises </xsl:text>
+      <xsl:value-of select="."/>
+      <xsl:text>]</xsl:text>
+    </xsl:when>
+    <xsl:when test="@refid = 'overview_parallel_group'">
+      <xsl:text>[link asio.overview.composition.parallel_group </xsl:text>
+      <xsl:value-of select="."/>
+      <xsl:text>]</xsl:text>
+    </xsl:when>
+    <xsl:when test="@refid = 'overview_compose'">
+      <xsl:text>[link asio.overview.composition.compose </xsl:text>
+      <xsl:value-of select="."/>
+      <xsl:text>]</xsl:text>
+    </xsl:when>
+    <xsl:when test="@refid = 'overview_token_adapters'">
+      <xsl:text>[link asio.overview.composition.token_adapters </xsl:text>
+      <xsl:value-of select="."/>
+      <xsl:text>]</xsl:text>
+    </xsl:when>
+    <xsl:when test="@refid = 'overview_type_erasure'">
+      <xsl:text>[link asio.overview.composition.type_erasure </xsl:text>
+      <xsl:value-of select="."/>
+      <xsl:text>]</xsl:text>
+    </xsl:when>
+    <xsl:when test="@refid = 'overview_immediate_completion'">
+      <xsl:text>[link asio.overview.composition.immediate_completion </xsl:text>
+      <xsl:value-of select="."/>
+      <xsl:text>]</xsl:text>
+    </xsl:when>
+    <xsl:when test="@refid = 'overview_protocols'">
+      <xsl:text>[link asio.overview.networking.protocols </xsl:text>
+      <xsl:value-of select="."/>
+      <xsl:text>]</xsl:text>
+    </xsl:when>
+    <xsl:when test="@refid = 'overview_other_protocols'">
+      <xsl:text>[link asio.overview.networking.other_protocols </xsl:text>
+      <xsl:value-of select="."/>
+      <xsl:text>]</xsl:text>
+    </xsl:when>
+    <xsl:when test="@refid = 'overview_iostreams'">
+      <xsl:text>[link asio.overview.networking.iostreams </xsl:text>
+      <xsl:value-of select="."/>
+      <xsl:text>]</xsl:text>
+    </xsl:when>
+    <xsl:when test="@refid = 'overview_files'">
+      <xsl:text>[link asio.overview.files </xsl:text>
+      <xsl:value-of select="."/>
+      <xsl:text>]</xsl:text>
+    </xsl:when>
+    <xsl:when test="@refid = 'overview_pipes'">
+      <xsl:text>[link asio.overview.pipes </xsl:text>
+      <xsl:value-of select="."/>
+      <xsl:text>]</xsl:text>
+    </xsl:when>
+    <xsl:when test="@refid = 'overview_serial_ports'">
+      <xsl:text>[link asio.overview.serial_ports </xsl:text>
+      <xsl:value-of select="."/>
+      <xsl:text>]</xsl:text>
+    </xsl:when>
+    <xsl:when test="@refid = 'overview_signals'">
+      <xsl:text>[link asio.overview.signals </xsl:text>
+      <xsl:value-of select="."/>
+      <xsl:text>]</xsl:text>
+    </xsl:when>
+    <xsl:when test="@refid = 'overview_channels'">
+      <xsl:text>[link asio.overview.channels </xsl:text>
+      <xsl:value-of select="."/>
+      <xsl:text>]</xsl:text>
+    </xsl:when>
+    <xsl:when test="@refid = 'overview_posix_local'">
+      <xsl:text>[link asio.overview.posix.local </xsl:text>
+      <xsl:value-of select="."/>
+      <xsl:text>]</xsl:text>
+    </xsl:when>
+    <xsl:when test="@refid = 'overview_posix_stream_descriptor'">
+      <xsl:text>[link asio.overview.posix.stream_descriptor </xsl:text>
+      <xsl:value-of select="."/>
+      <xsl:text>]</xsl:text>
+    </xsl:when>
+    <xsl:when test="@refid = 'overview_windows_stream_handle'">
+      <xsl:text>[link asio.overview.windows.stream_handle </xsl:text>
+      <xsl:value-of select="."/>
+      <xsl:text>]</xsl:text>
+    </xsl:when>
+    <xsl:when test="@refid = 'overview_windows_random_access_handle'">
+      <xsl:text>[link asio.overview.windows.random_access_handle </xsl:text>
+      <xsl:value-of select="."/>
+      <xsl:text>]</xsl:text>
+    </xsl:when>
+    <xsl:when test="@refid = 'overview_windows_object_handle'">
+      <xsl:text>[link asio.overview.windows.object_handle </xsl:text>
+      <xsl:value-of select="."/>
+      <xsl:text>]</xsl:text>
+    </xsl:when>
+    <xsl:when test="@refid = 'overview_ssl'">
+      <xsl:text>[link asio.overview.ssl </xsl:text>
+      <xsl:value-of select="."/>
+      <xsl:text>]</xsl:text>
+    </xsl:when>
+    <xsl:when test="@refid = 'overview_timers'">
+      <xsl:text>[link asio.overview.timers </xsl:text>
+      <xsl:value-of select="."/>
+      <xsl:text>]</xsl:text>
+    </xsl:when>
     <xsl:otherwise>
       <xsl:text>`</xsl:text>
       <xsl:value-of select="."/>
@@ -787,6 +979,186 @@
       <xsl:value-of select="."/>
       <xsl:text>]</xsl:text>
     </xsl:when>
+    <xsl:when test="@refid = 'overview_strands'">
+      <xsl:text>[link asio.overview.core.strands </xsl:text>
+      <xsl:value-of select="."/>
+      <xsl:text>]</xsl:text>
+    </xsl:when>
+    <xsl:when test="@refid = 'overview_buffers'">
+      <xsl:text>[link asio.overview.core.buffers </xsl:text>
+      <xsl:value-of select="."/>
+      <xsl:text>]</xsl:text>
+    </xsl:when>
+    <xsl:when test="@refid = 'overview_streams'">
+      <xsl:text>[link asio.overview.core.streams </xsl:text>
+      <xsl:value-of select="."/>
+      <xsl:text>]</xsl:text>
+    </xsl:when>
+    <xsl:when test="@refid = 'overview_line_based'">
+      <xsl:text>[link asio.overview.core.line_based </xsl:text>
+      <xsl:value-of select="."/>
+      <xsl:text>]</xsl:text>
+    </xsl:when>
+    <xsl:when test="@refid = 'overview_allocation'">
+      <xsl:text>[link asio.overview.core.allocation </xsl:text>
+      <xsl:value-of select="."/>
+      <xsl:text>]</xsl:text>
+    </xsl:when>
+    <xsl:when test="@refid = 'overview_cancellation'">
+      <xsl:text>[link asio.overview.core.cancellation </xsl:text>
+      <xsl:value-of select="."/>
+      <xsl:text>]</xsl:text>
+    </xsl:when>
+    <xsl:when test="@refid = 'overview_configuration'">
+      <xsl:text>[link asio.overview.core.configuration </xsl:text>
+      <xsl:value-of select="."/>
+      <xsl:text>]</xsl:text>
+    </xsl:when>
+    <xsl:when test="@refid = 'overview_associators'">
+      <xsl:text>[link asio.overview.model.associators </xsl:text>
+      <xsl:value-of select="."/>
+      <xsl:text>]</xsl:text>
+    </xsl:when>
+    <xsl:when test="@refid = 'overview_coroutine'">
+      <xsl:text>[link asio.overview.composition.coroutine </xsl:text>
+      <xsl:value-of select="."/>
+      <xsl:text>]</xsl:text>
+    </xsl:when>
+    <xsl:when test="@refid = 'overview_spawn'">
+      <xsl:text>[link asio.overview.composition.spawn </xsl:text>
+      <xsl:value-of select="."/>
+      <xsl:text>]</xsl:text>
+    </xsl:when>
+    <xsl:when test="@refid = 'overview_futures'">
+      <xsl:text>[link asio.overview.composition.futures </xsl:text>
+      <xsl:value-of select="."/>
+      <xsl:text>]</xsl:text>
+    </xsl:when>
+    <xsl:when test="@refid = 'overview_cpp20_coroutines'">
+      <xsl:text>[link asio.overview.composition.cpp20_coroutines </xsl:text>
+      <xsl:value-of select="."/>
+      <xsl:text>]</xsl:text>
+    </xsl:when>
+    <xsl:when test="@refid = 'overview_coro'">
+      <xsl:text>[link asio.overview.composition.coro </xsl:text>
+      <xsl:value-of select="."/>
+      <xsl:text>]</xsl:text>
+    </xsl:when>
+    <xsl:when test="@refid = 'overview_deferred'">
+      <xsl:text>[link asio.overview.composition.deferred </xsl:text>
+      <xsl:value-of select="."/>
+      <xsl:text>]</xsl:text>
+    </xsl:when>
+    <xsl:when test="@refid = 'overview_eager'">
+      <xsl:text>[link asio.overview.composition.eager </xsl:text>
+      <xsl:value-of select="."/>
+      <xsl:text>]</xsl:text>
+    </xsl:when>
+    <xsl:when test="@refid = 'overview_promises'">
+      <xsl:text>[link asio.overview.composition.promises </xsl:text>
+      <xsl:value-of select="."/>
+      <xsl:text>]</xsl:text>
+    </xsl:when>
+    <xsl:when test="@refid = 'overview_parallel_group'">
+      <xsl:text>[link asio.overview.composition.parallel_group </xsl:text>
+      <xsl:value-of select="."/>
+      <xsl:text>]</xsl:text>
+    </xsl:when>
+    <xsl:when test="@refid = 'overview_compose'">
+      <xsl:text>[link asio.overview.composition.compose </xsl:text>
+      <xsl:value-of select="."/>
+      <xsl:text>]</xsl:text>
+    </xsl:when>
+    <xsl:when test="@refid = 'overview_token_adapters'">
+      <xsl:text>[link asio.overview.composition.token_adapters </xsl:text>
+      <xsl:value-of select="."/>
+      <xsl:text>]</xsl:text>
+    </xsl:when>
+    <xsl:when test="@refid = 'overview_type_erasure'">
+      <xsl:text>[link asio.overview.composition.type_erasure </xsl:text>
+      <xsl:value-of select="."/>
+      <xsl:text>]</xsl:text>
+    </xsl:when>
+    <xsl:when test="@refid = 'overview_immediate_completion'">
+      <xsl:text>[link asio.overview.composition.immediate_completion </xsl:text>
+      <xsl:value-of select="."/>
+      <xsl:text>]</xsl:text>
+    </xsl:when>
+    <xsl:when test="@refid = 'overview_protocols'">
+      <xsl:text>[link asio.overview.networking.protocols </xsl:text>
+      <xsl:value-of select="."/>
+      <xsl:text>]</xsl:text>
+    </xsl:when>
+    <xsl:when test="@refid = 'overview_other_protocols'">
+      <xsl:text>[link asio.overview.networking.other_protocols </xsl:text>
+      <xsl:value-of select="."/>
+      <xsl:text>]</xsl:text>
+    </xsl:when>
+    <xsl:when test="@refid = 'overview_iostreams'">
+      <xsl:text>[link asio.overview.networking.iostreams </xsl:text>
+      <xsl:value-of select="."/>
+      <xsl:text>]</xsl:text>
+    </xsl:when>
+    <xsl:when test="@refid = 'overview_files'">
+      <xsl:text>[link asio.overview.files </xsl:text>
+      <xsl:value-of select="."/>
+      <xsl:text>]</xsl:text>
+    </xsl:when>
+    <xsl:when test="@refid = 'overview_pipes'">
+      <xsl:text>[link asio.overview.pipes </xsl:text>
+      <xsl:value-of select="."/>
+      <xsl:text>]</xsl:text>
+    </xsl:when>
+    <xsl:when test="@refid = 'overview_serial_ports'">
+      <xsl:text>[link asio.overview.serial_ports </xsl:text>
+      <xsl:value-of select="."/>
+      <xsl:text>]</xsl:text>
+    </xsl:when>
+    <xsl:when test="@refid = 'overview_signals'">
+      <xsl:text>[link asio.overview.signals </xsl:text>
+      <xsl:value-of select="."/>
+      <xsl:text>]</xsl:text>
+    </xsl:when>
+    <xsl:when test="@refid = 'overview_channels'">
+      <xsl:text>[link asio.overview.channels </xsl:text>
+      <xsl:value-of select="."/>
+      <xsl:text>]</xsl:text>
+    </xsl:when>
+    <xsl:when test="@refid = 'overview_posix_local'">
+      <xsl:text>[link asio.overview.posix.local </xsl:text>
+      <xsl:value-of select="."/>
+      <xsl:text>]</xsl:text>
+    </xsl:when>
+    <xsl:when test="@refid = 'overview_posix_stream_descriptor'">
+      <xsl:text>[link asio.overview.posix.stream_descriptor </xsl:text>
+      <xsl:value-of select="."/>
+      <xsl:text>]</xsl:text>
+    </xsl:when>
+    <xsl:when test="@refid = 'overview_windows_stream_handle'">
+      <xsl:text>[link asio.overview.windows.stream_handle </xsl:text>
+      <xsl:value-of select="."/>
+      <xsl:text>]</xsl:text>
+    </xsl:when>
+    <xsl:when test="@refid = 'overview_windows_random_access_handle'">
+      <xsl:text>[link asio.overview.windows.random_access_handle </xsl:text>
+      <xsl:value-of select="."/>
+      <xsl:text>]</xsl:text>
+    </xsl:when>
+    <xsl:when test="@refid = 'overview_windows_object_handle'">
+      <xsl:text>[link asio.overview.windows.object_handle </xsl:text>
+      <xsl:value-of select="."/>
+      <xsl:text>]</xsl:text>
+    </xsl:when>
+    <xsl:when test="@refid = 'overview_ssl'">
+      <xsl:text>[link asio.overview.ssl </xsl:text>
+      <xsl:value-of select="."/>
+      <xsl:text>]</xsl:text>
+    </xsl:when>
+    <xsl:when test="@refid = 'overview_timers'">
+      <xsl:text>[link asio.overview.timers </xsl:text>
+      <xsl:value-of select="."/>
+      <xsl:text>]</xsl:text>
+    </xsl:when>
     <xsl:otherwise>
       <xsl:text>`</xsl:text>
       <xsl:value-of select="."/>
@@ -819,6 +1191,53 @@
       <xsl:value-of name="text" select="$ref-name"/>
       <xsl:text>`]</xsl:text>
     </xsl:when>
+    <xsl:when test="contains(@refid, 'classasio') and count($memberdefs) &gt; 0">
+      <xsl:variable name="ref-text">
+        <xsl:call-template name="strip-asio-ns">
+          <xsl:with-param name="name" select="."/>
+        </xsl:call-template>
+      </xsl:variable>
+      <xsl:variable name="written-class">
+        <xsl:if test="contains($ref-text, '::')">
+          <xsl:variable name="written-member">
+            <xsl:call-template name="strip-ns">
+              <xsl:with-param name="name" select="$ref-text"/>
+            </xsl:call-template>
+          </xsl:variable>
+          <xsl:value-of select="substring-before($ref-text, concat('::', $written-member))"/>
+        </xsl:if>
+      </xsl:variable>
+      <xsl:variable name="class-name">
+        <xsl:choose>
+          <xsl:when test="$written-class != ''
+              and substring($written-class, string-length($written-class) - 4) = '_base'">
+            <xsl:value-of select="$written-class"/>
+          </xsl:when>
+          <xsl:otherwise>
+            <xsl:call-template name="strip-asio-ns">
+              <xsl:with-param name="name" select="($memberdefs)[1]/../../compoundname"/>
+            </xsl:call-template>
+          </xsl:otherwise>
+        </xsl:choose>
+      </xsl:variable>
+      <xsl:variable name="class-id">
+        <xsl:call-template name="make-id">
+          <xsl:with-param name="name" select="$class-name"/>
+        </xsl:call-template>
+      </xsl:variable>
+      <xsl:variable name="member-id">
+        <xsl:call-template name="make-id">
+          <xsl:with-param name="name" select="($memberdefs)[1]/name"/>
+        </xsl:call-template>
+      </xsl:variable>
+      <xsl:text>[link asio.reference.</xsl:text>
+      <xsl:value-of select="$class-id"/>
+      <xsl:text>.</xsl:text>
+      <xsl:value-of select="$member-id"/>
+      <xsl:text> `</xsl:text>
+      <xsl:value-of select="$ref-text"/>
+      <xsl:text>`]</xsl:text>
+    </xsl:when>
     <xsl:otherwise>
       <xsl:text>`</xsl:text>
       <xsl:value-of select="."/>
@@ -849,6 +1268,53 @@
       <xsl:value-of select="$ref-id"/>
       <xsl:text> `</xsl:text>
       <xsl:value-of name="text" select="$ref-name"/>
+      <xsl:text>`]</xsl:text>
+    </xsl:when>
+    <xsl:when test="contains(@refid, 'classasio') and count($memberdefs) &gt; 0">
+      <xsl:variable name="ref-text">
+        <xsl:call-template name="strip-asio-ns">
+          <xsl:with-param name="name" select="."/>
+        </xsl:call-template>
+      </xsl:variable>
+      <xsl:variable name="written-class">
+        <xsl:if test="contains($ref-text, '::')">
+          <xsl:variable name="written-member">
+            <xsl:call-template name="strip-ns">
+              <xsl:with-param name="name" select="$ref-text"/>
+            </xsl:call-template>
+          </xsl:variable>
+          <xsl:value-of select="substring-before($ref-text, concat('::', $written-member))"/>
+        </xsl:if>
+      </xsl:variable>
+      <xsl:variable name="class-name">
+        <xsl:choose>
+          <xsl:when test="$written-class != ''
+              and substring($written-class, string-length($written-class) - 4) = '_base'">
+            <xsl:value-of select="$written-class"/>
+          </xsl:when>
+          <xsl:otherwise>
+            <xsl:call-template name="strip-asio-ns">
+              <xsl:with-param name="name" select="($memberdefs)[1]/../../compoundname"/>
+            </xsl:call-template>
+          </xsl:otherwise>
+        </xsl:choose>
+      </xsl:variable>
+      <xsl:variable name="class-id">
+        <xsl:call-template name="make-id">
+          <xsl:with-param name="name" select="$class-name"/>
+        </xsl:call-template>
+      </xsl:variable>
+      <xsl:variable name="member-id">
+        <xsl:call-template name="make-id">
+          <xsl:with-param name="name" select="($memberdefs)[1]/name"/>
+        </xsl:call-template>
+      </xsl:variable>
+      <xsl:text>[link asio.reference.</xsl:text>
+      <xsl:value-of select="$class-id"/>
+      <xsl:text>.</xsl:text>
+      <xsl:value-of select="$member-id"/>
+      <xsl:text> `</xsl:text>
+      <xsl:value-of select="$ref-text"/>
       <xsl:text>`]</xsl:text>
     </xsl:when>
     <xsl:otherwise>
@@ -1971,6 +2437,9 @@
         <xsl:when test="$declname = 'Traits'">
           <xsl:value-of select="$declname"/>
         </xsl:when>
+        <xsl:when test="$declname = 'Trigger'">
+          <xsl:value-of select="$declname"/>
+        </xsl:when>
         <xsl:when test="$declname = 'U'">
           <xsl:value-of select="$declname"/>
         </xsl:when>
@@ -2004,7 +2473,55 @@
         </xsl:when>
         <xsl:otherwise><xsl:value-of select="defval"/></xsl:otherwise>
         </xsl:choose></xsl:if>
+      <xsl:if test="not(count(defval) > 0)">
+        <xsl:call-template name="class-template-default">
+          <xsl:with-param name="class">
+            <xsl:call-template name="strip-asio-ns">
+              <xsl:with-param name="name" select="../../compoundname"/>
+            </xsl:call-template>
+          </xsl:with-param>
+          <xsl:with-param name="name" select="$declname"/>
+        </xsl:call-template>
+      </xsl:if>
       <xsl:if test="not(position() = last())">,</xsl:if>
+</xsl:template>
+
+
+<xsl:template name="class-template-default">
+  <xsl:param name="class"/>
+  <xsl:param name="name"/>
+  <xsl:choose>
+    <xsl:when test="$name = 'Executor' and (
+        $class = 'basic_datagram_socket'
+          or $class = 'basic_raw_socket'
+          or $class = 'basic_seq_packet_socket'
+          or $class = 'basic_socket'
+          or $class = 'basic_socket_acceptor'
+          or $class = 'basic_stream_socket'
+          or $class = 'basic_file'
+          or $class = 'basic_random_access_file'
+          or $class = 'basic_stream_file'
+          or $class = 'basic_serial_port'
+          or $class = 'basic_signal_set'
+          or $class = 'basic_readable_pipe'
+          or $class = 'basic_writable_pipe'
+          or $class = 'basic_waitable_timer'
+          or $class = 'ip::basic_resolver'
+          or $class = 'posix::basic_descriptor'
+          or $class = 'posix::basic_stream_descriptor'
+          or $class = 'windows::basic_object_handle'
+          or $class = 'windows::basic_overlapped_handle'
+          or $class = 'windows::basic_random_access_handle'
+          or $class = 'windows::basic_stream_handle')">
+      <xsl:text> = any_io_executor</xsl:text>
+    </xsl:when>
+    <xsl:when test="$class = 'basic_waitable_timer' and $name = 'WaitTraits'">
+      <xsl:text> = wait_traits&lt; Clock &gt;</xsl:text>
+    </xsl:when>
+    <xsl:when test="$class = 'buffers_iterator' and $name = 'ByteType'">
+      <xsl:text> = char</xsl:text>
+    </xsl:when>
+  </xsl:choose>
 </xsl:template>
 
 

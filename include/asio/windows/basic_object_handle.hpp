@@ -2,7 +2,7 @@
 // windows/basic_object_handle.hpp
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //
-// Copyright (c) 2003-2025 Christopher M. Kohlhoff (chris at kohlhoff dot com)
+// Copyright (c) 2003-2026 Christopher M. Kohlhoff (chris at kohlhoff dot com)
 // Copyright (c) 2011 Boris Schaeling (boris@highscore.de)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
@@ -33,7 +33,17 @@
 #include "asio/detail/push_options.hpp"
 
 namespace asio {
+ASIO_INLINE_NAMESPACE_BEGIN
 namespace windows {
+
+#if !defined(ASIO_WINDOWS_BASIC_OBJECT_HANDLE_FWD_DECL)
+#define ASIO_WINDOWS_BASIC_OBJECT_HANDLE_FWD_DECL
+
+// Forward declaration with defaulted arguments.
+template <typename Executor = any_io_executor>
+class basic_object_handle;
+
+#endif // !defined(ASIO_WINDOWS_BASIC_OBJECT_HANDLE_FWD_DECL)
 
 /// Provides object-oriented handle functionality.
 /**
@@ -43,8 +53,10 @@ namespace windows {
  * @par Thread Safety
  * @e Distinct @e objects: Safe.@n
  * @e Shared @e objects: Unsafe.
+ *
+ * @sa @ref overview_windows_object_handle "Object HANDLEs"
  */
-template <typename Executor = any_io_executor>
+template <typename Executor>
 class basic_object_handle
 {
 private:
@@ -429,7 +441,8 @@ public:
       async_initiate<WaitToken, void (asio::error_code)>(
         declval<initiate_async_wait>(), token))
   {
-    return async_initiate<WaitToken, void (asio::error_code)>(
+    ASIO_INVOKE_INLINE return async_initiate<WaitToken,
+      void (asio::error_code)>(
         initiate_async_wait(this), token);
   }
 
@@ -461,7 +474,7 @@ private:
       ASIO_WAIT_HANDLER_CHECK(WaitHandler, handler) type_check;
 
       detail::non_const_lvalue<WaitHandler> handler2(handler);
-      self_->impl_.get_service().async_wait(
+      ASIO_INVOKE_INLINE self_->impl_.get_service().async_wait(
           self_->impl_.get_implementation(),
           handler2.value, self_->impl_.get_executor());
     }
@@ -475,6 +488,7 @@ private:
 };
 
 } // namespace windows
+ASIO_INLINE_NAMESPACE_END
 } // namespace asio
 
 #include "asio/detail/pop_options.hpp"

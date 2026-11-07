@@ -2,7 +2,7 @@
 // detail/win_iocp_io_context.hpp
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //
-// Copyright (c) 2003-2025 Christopher M. Kohlhoff (chris at kohlhoff dot com)
+// Copyright (c) 2003-2026 Christopher M. Kohlhoff (chris at kohlhoff dot com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -35,6 +35,7 @@
 #include "asio/detail/push_options.hpp"
 
 namespace asio {
+ASIO_INLINE_NAMESPACE_BEGIN
 namespace detail {
 
 class wait_op;
@@ -71,19 +72,19 @@ public:
       HANDLE handle, asio::error_code& ec);
 
   // Run the event loop until stopped or no more work.
-  ASIO_DECL size_t run(asio::error_code& ec);
+  ASIO_DECL size_t run();
 
   // Run until stopped or one operation is performed.
-  ASIO_DECL size_t run_one(asio::error_code& ec);
+  ASIO_DECL size_t run_one();
 
   // Run until timeout, interrupted, or one operation is performed.
-  ASIO_DECL size_t wait_one(long usec, asio::error_code& ec);
+  ASIO_DECL size_t wait_one(long usec);
 
   // Poll for operations without blocking.
-  ASIO_DECL size_t poll(asio::error_code& ec);
+  ASIO_DECL size_t poll();
 
   // Poll for one operation without blocking.
-  ASIO_DECL size_t poll_one(asio::error_code& ec);
+  ASIO_DECL size_t poll_one();
 
   // Stop the event processing loop.
   ASIO_DECL void stop();
@@ -257,18 +258,18 @@ private:
   auto_handle iocp_;
 
   // The count of unfinished work.
-  long outstanding_work_;
+  LONG outstanding_work_;
 
   // Flag to indicate whether the event loop has been stopped.
-  mutable long stopped_;
+  mutable LONG stopped_;
 
   // Flag to indicate whether there is an in-flight stop event. Every event
   // posted using PostQueuedCompletionStatus consumes non-paged pool, so to
   // avoid exhausting this resource we limit the number of outstanding events.
-  long stop_event_posted_;
+  LONG stop_event_posted_;
 
   // Flag to indicate whether the service has been shut down.
-  long shutdown_;
+  LONG shutdown_;
 
   enum
   {
@@ -314,7 +315,11 @@ private:
   auto_handle waitable_timer_;
 
   // Non-zero if timers or completed operations need to be dispatched.
-  long dispatch_required_;
+  LONG dispatch_required_;
+
+  // Non-zero if a wake_for_dispatch packet has been posted but not yet
+  // dequeued.
+  LONG wake_pending_;
 
   // Mutex for protecting access to the timer queues and completed operations.
   mutex dispatch_mutex_;
@@ -333,6 +338,7 @@ private:
 };
 
 } // namespace detail
+ASIO_INLINE_NAMESPACE_END
 } // namespace asio
 
 #include "asio/detail/pop_options.hpp"

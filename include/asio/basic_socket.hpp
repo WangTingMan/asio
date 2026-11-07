@@ -2,7 +2,7 @@
 // basic_socket.hpp
 // ~~~~~~~~~~~~~~~~
 //
-// Copyright (c) 2003-2025 Christopher M. Kohlhoff (chris at kohlhoff dot com)
+// Copyright (c) 2003-2026 Christopher M. Kohlhoff (chris at kohlhoff dot com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -42,6 +42,7 @@
 #include "asio/detail/push_options.hpp"
 
 namespace asio {
+ASIO_INLINE_NAMESPACE_BEGIN
 
 #if !defined(ASIO_BASIC_SOCKET_FWD_DECL)
 #define ASIO_BASIC_SOCKET_FWD_DECL
@@ -841,7 +842,7 @@ public:
    * @code
    * asio::ip::tcp::socket socket(my_context);
    * asio::ip::tcp::endpoint endpoint(
-   *     asio::ip::address::from_string("1.2.3.4"), 12345);
+   *     asio::ip::make_address("1.2.3.4"), 12345);
    * socket.connect(endpoint);
    * @endcode
    */
@@ -877,7 +878,7 @@ public:
    * @code
    * asio::ip::tcp::socket socket(my_context);
    * asio::ip::tcp::endpoint endpoint(
-   *     asio::ip::address::from_string("1.2.3.4"), 12345);
+   *     asio::ip::make_address("1.2.3.4"), 12345);
    * asio::error_code ec;
    * socket.connect(endpoint, ec);
    * if (ec)
@@ -946,7 +947,7 @@ public:
    *
    * asio::ip::tcp::socket socket(my_context);
    * asio::ip::tcp::endpoint endpoint(
-   *     asio::ip::address::from_string("1.2.3.4"), 12345);
+   *     asio::ip::make_address("1.2.3.4"), 12345);
    * socket.async_connect(endpoint, connect_handler);
    * @endcode
    *
@@ -977,7 +978,8 @@ public:
       impl_.get_service().open(impl_.get_implementation(), protocol, open_ec);
     }
 
-    return async_initiate<ConnectToken, void (asio::error_code)>(
+    ASIO_INVOKE_INLINE return async_initiate<ConnectToken,
+      void (asio::error_code)>(
         initiate_async_connect(this), token, peer_endpoint, open_ec);
   }
 
@@ -989,22 +991,22 @@ public:
    *
    * @throws asio::system_error Thrown on failure.
    *
-   * @sa SettableSocketOption @n
-   * asio::socket_base::broadcast @n
-   * asio::socket_base::do_not_route @n
-   * asio::socket_base::keep_alive @n
-   * asio::socket_base::linger @n
-   * asio::socket_base::receive_buffer_size @n
-   * asio::socket_base::receive_low_watermark @n
-   * asio::socket_base::reuse_address @n
-   * asio::socket_base::send_buffer_size @n
-   * asio::socket_base::send_low_watermark @n
-   * asio::ip::multicast::join_group @n
-   * asio::ip::multicast::leave_group @n
-   * asio::ip::multicast::enable_loopback @n
-   * asio::ip::multicast::outbound_interface @n
-   * asio::ip::multicast::hops @n
-   * asio::ip::tcp::no_delay
+   * @sa
+   * @li asio::socket_base::broadcast
+   * @li asio::socket_base::do_not_route
+   * @li asio::socket_base::keep_alive
+   * @li asio::socket_base::linger
+   * @li asio::socket_base::receive_buffer_size
+   * @li asio::socket_base::receive_low_watermark
+   * @li asio::socket_base::reuse_address
+   * @li asio::socket_base::send_buffer_size
+   * @li asio::socket_base::send_low_watermark
+   * @li asio::ip::multicast::join_group
+   * @li asio::ip::multicast::leave_group
+   * @li asio::ip::multicast::enable_loopback
+   * @li asio::ip::multicast::outbound_interface
+   * @li asio::ip::multicast::hops
+   * @li asio::ip::tcp::no_delay
    *
    * @par Example
    * Setting the IPPROTO_TCP/TCP_NODELAY option:
@@ -1031,22 +1033,22 @@ public:
    *
    * @param ec Set to indicate what error occurred, if any.
    *
-   * @sa SettableSocketOption @n
-   * asio::socket_base::broadcast @n
-   * asio::socket_base::do_not_route @n
-   * asio::socket_base::keep_alive @n
-   * asio::socket_base::linger @n
-   * asio::socket_base::receive_buffer_size @n
-   * asio::socket_base::receive_low_watermark @n
-   * asio::socket_base::reuse_address @n
-   * asio::socket_base::send_buffer_size @n
-   * asio::socket_base::send_low_watermark @n
-   * asio::ip::multicast::join_group @n
-   * asio::ip::multicast::leave_group @n
-   * asio::ip::multicast::enable_loopback @n
-   * asio::ip::multicast::outbound_interface @n
-   * asio::ip::multicast::hops @n
-   * asio::ip::tcp::no_delay
+   * @sa
+   * @li asio::socket_base::broadcast
+   * @li asio::socket_base::do_not_route
+   * @li asio::socket_base::keep_alive
+   * @li asio::socket_base::linger
+   * @li asio::socket_base::receive_buffer_size
+   * @li asio::socket_base::receive_low_watermark
+   * @li asio::socket_base::reuse_address
+   * @li asio::socket_base::send_buffer_size
+   * @li asio::socket_base::send_low_watermark
+   * @li asio::ip::multicast::join_group
+   * @li asio::ip::multicast::leave_group
+   * @li asio::ip::multicast::enable_loopback
+   * @li asio::ip::multicast::outbound_interface
+   * @li asio::ip::multicast::hops
+   * @li asio::ip::tcp::no_delay
    *
    * @par Example
    * Setting the IPPROTO_TCP/TCP_NODELAY option:
@@ -1078,22 +1080,22 @@ public:
    *
    * @throws asio::system_error Thrown on failure.
    *
-   * @sa GettableSocketOption @n
-   * asio::socket_base::broadcast @n
-   * asio::socket_base::do_not_route @n
-   * asio::socket_base::keep_alive @n
-   * asio::socket_base::linger @n
-   * asio::socket_base::receive_buffer_size @n
-   * asio::socket_base::receive_low_watermark @n
-   * asio::socket_base::reuse_address @n
-   * asio::socket_base::send_buffer_size @n
-   * asio::socket_base::send_low_watermark @n
-   * asio::ip::multicast::join_group @n
-   * asio::ip::multicast::leave_group @n
-   * asio::ip::multicast::enable_loopback @n
-   * asio::ip::multicast::outbound_interface @n
-   * asio::ip::multicast::hops @n
-   * asio::ip::tcp::no_delay
+   * @sa
+   * @li asio::socket_base::broadcast
+   * @li asio::socket_base::do_not_route
+   * @li asio::socket_base::keep_alive
+   * @li asio::socket_base::linger
+   * @li asio::socket_base::receive_buffer_size
+   * @li asio::socket_base::receive_low_watermark
+   * @li asio::socket_base::reuse_address
+   * @li asio::socket_base::send_buffer_size
+   * @li asio::socket_base::send_low_watermark
+   * @li asio::ip::multicast::join_group
+   * @li asio::ip::multicast::leave_group
+   * @li asio::ip::multicast::enable_loopback
+   * @li asio::ip::multicast::outbound_interface
+   * @li asio::ip::multicast::hops
+   * @li asio::ip::tcp::no_delay
    *
    * @par Example
    * Getting the value of the SOL_SOCKET/SO_KEEPALIVE option:
@@ -1121,22 +1123,22 @@ public:
    *
    * @param ec Set to indicate what error occurred, if any.
    *
-   * @sa GettableSocketOption @n
-   * asio::socket_base::broadcast @n
-   * asio::socket_base::do_not_route @n
-   * asio::socket_base::keep_alive @n
-   * asio::socket_base::linger @n
-   * asio::socket_base::receive_buffer_size @n
-   * asio::socket_base::receive_low_watermark @n
-   * asio::socket_base::reuse_address @n
-   * asio::socket_base::send_buffer_size @n
-   * asio::socket_base::send_low_watermark @n
-   * asio::ip::multicast::join_group @n
-   * asio::ip::multicast::leave_group @n
-   * asio::ip::multicast::enable_loopback @n
-   * asio::ip::multicast::outbound_interface @n
-   * asio::ip::multicast::hops @n
-   * asio::ip::tcp::no_delay
+   * @sa
+   * @li asio::socket_base::broadcast
+   * @li asio::socket_base::do_not_route
+   * @li asio::socket_base::keep_alive
+   * @li asio::socket_base::linger
+   * @li asio::socket_base::receive_buffer_size
+   * @li asio::socket_base::receive_low_watermark
+   * @li asio::socket_base::reuse_address
+   * @li asio::socket_base::send_buffer_size
+   * @li asio::socket_base::send_low_watermark
+   * @li asio::ip::multicast::join_group
+   * @li asio::ip::multicast::leave_group
+   * @li asio::ip::multicast::enable_loopback
+   * @li asio::ip::multicast::outbound_interface
+   * @li asio::ip::multicast::hops
+   * @li asio::ip::tcp::no_delay
    *
    * @par Example
    * Getting the value of the SOL_SOCKET/SO_KEEPALIVE option:
@@ -1169,9 +1171,8 @@ public:
    *
    * @throws asio::system_error Thrown on failure.
    *
-   * @sa IoControlCommand @n
-   * asio::socket_base::bytes_readable @n
-   * asio::socket_base::non_blocking_io
+   * @sa
+   * @li asio::socket_base::bytes_readable
    *
    * @par Example
    * Getting the number of bytes ready to read:
@@ -1199,9 +1200,8 @@ public:
    *
    * @param ec Set to indicate what error occurred, if any.
    *
-   * @sa IoControlCommand @n
-   * asio::socket_base::bytes_readable @n
-   * asio::socket_base::non_blocking_io
+   * @sa
+   * @li asio::socket_base::bytes_readable
    *
    * @par Example
    * Getting the number of bytes ready to read:
@@ -1820,7 +1820,8 @@ public:
       async_initiate<WaitToken, void (asio::error_code)>(
           declval<initiate_async_wait>(), token, w))
   {
-    return async_initiate<WaitToken, void (asio::error_code)>(
+    ASIO_INVOKE_INLINE return async_initiate<WaitToken,
+      void (asio::error_code)>(
         initiate_async_wait(this), token, w);
   }
 
@@ -1886,7 +1887,7 @@ private:
       else
       {
         detail::non_const_lvalue<ConnectHandler> handler2(handler);
-        self_->impl_.get_service().async_connect(
+        ASIO_INVOKE_INLINE self_->impl_.get_service().async_connect(
             self_->impl_.get_implementation(), peer_endpoint,
             handler2.value, self_->impl_.get_executor());
       }
@@ -1919,7 +1920,7 @@ private:
       ASIO_WAIT_HANDLER_CHECK(WaitHandler, handler) type_check;
 
       detail::non_const_lvalue<WaitHandler> handler2(handler);
-      self_->impl_.get_service().async_wait(
+      ASIO_INVOKE_INLINE self_->impl_.get_service().async_wait(
           self_->impl_.get_implementation(), w,
           handler2.value, self_->impl_.get_executor());
     }
@@ -1929,6 +1930,7 @@ private:
   };
 };
 
+ASIO_INLINE_NAMESPACE_END
 } // namespace asio
 
 #include "asio/detail/pop_options.hpp"

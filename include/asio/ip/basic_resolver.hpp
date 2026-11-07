@@ -2,7 +2,7 @@
 // ip/basic_resolver.hpp
 // ~~~~~~~~~~~~~~~~~~~~~
 //
-// Copyright (c) 2003-2025 Christopher M. Kohlhoff (chris at kohlhoff dot com)
+// Copyright (c) 2003-2026 Christopher M. Kohlhoff (chris at kohlhoff dot com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -40,6 +40,7 @@
 #include "asio/detail/push_options.hpp"
 
 namespace asio {
+ASIO_INLINE_NAMESPACE_BEGIN
 namespace ip {
 
 #if !defined(ASIO_IP_BASIC_RESOLVER_FWD_DECL)
@@ -721,7 +722,7 @@ public:
     basic_resolver_query<protocol_type> q(static_cast<std::string>(host),
         static_cast<std::string>(service), resolve_flags);
 
-    return asio::async_initiate<ResolveToken,
+    ASIO_INVOKE_INLINE return asio::async_initiate<ResolveToken,
       void (asio::error_code, results_type)>(
         initiate_async_resolve(this), token, q);
   }
@@ -866,7 +867,7 @@ public:
         protocol, static_cast<std::string>(host),
         static_cast<std::string>(service), resolve_flags);
 
-    return asio::async_initiate<ResolveToken,
+    ASIO_INVOKE_INLINE return asio::async_initiate<ResolveToken,
       void (asio::error_code, results_type)>(
         initiate_async_resolve(this), token, q);
   }
@@ -953,7 +954,7 @@ public:
         void (asio::error_code, results_type)>(
           declval<initiate_async_resolve>(), token, e))
   {
-    return asio::async_initiate<ResolveToken,
+    ASIO_INVOKE_INLINE return asio::async_initiate<ResolveToken,
       void (asio::error_code, results_type)>(
         initiate_async_resolve(this), token, e);
   }
@@ -988,7 +989,7 @@ private:
           ResolveHandler, handler, results_type) type_check;
 
       asio::detail::non_const_lvalue<ResolveHandler> handler2(handler);
-      self_->impl_.get_service().async_resolve(
+      ASIO_INVOKE_INLINE self_->impl_.get_service().async_resolve(
           self_->impl_.get_implementation(), q,
           handler2.value, self_->impl_.get_executor());
     }
@@ -1009,6 +1010,7 @@ private:
 };
 
 } // namespace ip
+ASIO_INLINE_NAMESPACE_END
 } // namespace asio
 
 #include "asio/detail/pop_options.hpp"

@@ -2,7 +2,7 @@
 // spawn.hpp
 // ~~~~~~~~~
 //
-// Copyright (c) 2003-2025 Christopher M. Kohlhoff (chris at kohlhoff dot com)
+// Copyright (c) 2003-2026 Christopher M. Kohlhoff (chris at kohlhoff dot com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -16,6 +16,11 @@
 #endif // defined(_MSC_VER) && (_MSC_VER >= 1200)
 
 #include "asio/detail/config.hpp"
+
+#if defined(ASIO_HAS_BOOST_CONTEXT_FIBER) \
+  || defined(ASIO_HAS_ASM_FIBER) \
+  || defined(GENERATING_DOCUMENTATION)
+
 #include "asio/any_io_executor.hpp"
 #include "asio/cancellation_signal.hpp"
 #include "asio/cancellation_state.hpp"
@@ -29,117 +34,10 @@
 #include "asio/detail/push_options.hpp"
 
 namespace asio {
+ASIO_INLINE_NAMESPACE_BEGIN
 namespace detail {
 
-// Base class for all spawn()-ed thread implementations.
-class spawned_thread_base
-{
-public:
-  spawned_thread_base()
-    : owner_(0),
-      has_context_switched_(false),
-      throw_if_cancelled_(false),
-      terminal_(false)
-  {
-  }
-
-  virtual ~spawned_thread_base() {}
-  virtual void resume() = 0;
-  virtual void suspend_with(void (*fn)(void*), void* arg) = 0;
-  virtual void destroy() = 0;
-
-  void attach(spawned_thread_base** owner)
-  {
-    owner_ = owner;
-    *owner_ = this;
-  }
-
-  void detach()
-  {
-    if (owner_)
-      *owner_ = 0;
-    owner_ = 0;
-  }
-
-  void suspend()
-  {
-    suspend_with(0, 0);
-  }
-
-  template <typename F>
-  void suspend_with(F f)
-  {
-    suspend_with(&spawned_thread_base::call<F>, &f);
-  }
-
-  cancellation_slot get_cancellation_slot() const noexcept
-  {
-    return cancellation_state_.slot();
-  }
-
-  cancellation_state get_cancellation_state() const noexcept
-  {
-    return cancellation_state_;
-  }
-
-  void reset_cancellation_state()
-  {
-    cancellation_state_ = cancellation_state(parent_cancellation_slot_);
-  }
-
-  template <typename Filter>
-  void reset_cancellation_state(Filter filter)
-  {
-    cancellation_state_ = cancellation_state(
-        parent_cancellation_slot_, filter, filter);
-  }
-
-  template <typename InFilter, typename OutFilter>
-  void reset_cancellation_state(InFilter in_filter, OutFilter out_filter)
-  {
-    cancellation_state_ = cancellation_state(
-        parent_cancellation_slot_, in_filter, out_filter);
-  }
-
-  cancellation_type_t cancelled() const noexcept
-  {
-    return cancellation_state_.cancelled();
-  }
-
-  bool has_context_switched() const noexcept
-  {
-    return has_context_switched_;
-  }
-
-  bool throw_if_cancelled() const noexcept
-  {
-    return throw_if_cancelled_;
-  }
-
-  void throw_if_cancelled(bool value) noexcept
-  {
-    throw_if_cancelled_ = value;
-  }
-
-protected:
-  spawned_thread_base** owner_; // Points to data member in active handler.
-  asio::cancellation_slot parent_cancellation_slot_;
-  asio::cancellation_state cancellation_state_;
-  bool has_context_switched_;
-  bool throw_if_cancelled_;
-  bool terminal_;
-
-private:
-  // Disallow copying and assignment.
-  spawned_thread_base(const spawned_thread_base&) = delete;
-  spawned_thread_base& operator=(const spawned_thread_base&) = delete;
-
-  template <typename F>
-  static void call(void* f)
-  {
-    (*static_cast<F*>(f))();
-  }
-};
+class spawned_thread;
 
 template <typename T>
 struct spawn_signature
@@ -209,16 +107,10 @@ public:
   }
 
   /// Get the cancellation slot associated with the coroutine.
-  cancellation_slot_type get_cancellation_slot() const noexcept
-  {
-    return spawned_thread_->get_cancellation_slot();
-  }
+  cancellation_slot_type get_cancellation_slot() const noexcept;
 
   /// Get the cancellation state associated with the coroutine.
-  cancellation_state get_cancellation_state() const noexcept
-  {
-    return spawned_thread_->get_cancellation_state();
-  }
+  cancellation_state get_cancellation_state() const noexcept;
 
   /// Reset the cancellation state associated with the coroutine.
   /**
@@ -227,10 +119,7 @@ public:
    * asio::cancellation_state object <tt>S</tt>, constructed as
    * <tt>S(P)</tt>, into the current coroutine's cancellation state object.
    */
-  void reset_cancellation_state() const
-  {
-    spawned_thread_->reset_cancellation_state();
-  }
+  void reset_cancellation_state() const;
 
   /// Reset the cancellation state associated with the coroutine.
   /**
@@ -241,11 +130,7 @@ public:
    * cancellation state object.
    */
   template <typename Filter>
-  void reset_cancellation_state(Filter&& filter) const
-  {
-    spawned_thread_->reset_cancellation_state(
-        static_cast<Filter&&>(filter));
-  }
+  void reset_cancellation_state(Filter&& filter) const;
 
   /// Reset the cancellation state associated with the coroutine.
   /**
@@ -258,32 +143,18 @@ public:
    */
   template <typename InFilter, typename OutFilter>
   void reset_cancellation_state(InFilter&& in_filter,
-      OutFilter&& out_filter) const
-  {
-    spawned_thread_->reset_cancellation_state(
-        static_cast<InFilter&&>(in_filter),
-        static_cast<OutFilter&&>(out_filter));
-  }
+      OutFilter&& out_filter) const;
 
   /// Determine whether the current coroutine has been cancelled.
-  cancellation_type_t cancelled() const noexcept
-  {
-    return spawned_thread_->cancelled();
-  }
+  cancellation_type_t cancelled() const noexcept;
 
   /// Determine whether the coroutine throws if trying to suspend when it has
   /// been cancelled.
-  bool throw_if_cancelled() const noexcept
-  {
-    return spawned_thread_->throw_if_cancelled();
-  }
+  bool throw_if_cancelled() const noexcept;
 
   /// Set whether the coroutine throws if trying to suspend when it has been
   /// cancelled.
-  void throw_if_cancelled(bool value) const noexcept
-  {
-    spawned_thread_->throw_if_cancelled(value);
-  }
+  void throw_if_cancelled(bool value) const noexcept;
 
   /// Return a yield context that sets the specified error_code.
   /**
@@ -313,15 +184,14 @@ public:
 
 #if !defined(GENERATING_DOCUMENTATION)
 //private:
-  basic_yield_context(detail::spawned_thread_base* spawned_thread,
-      const Executor& ex)
-    : spawned_thread_(spawned_thread),
+  basic_yield_context(detail::spawned_thread* t, const Executor& ex)
+    : spawned_thread_(t),
       executor_(ex),
       ec_(0)
   {
   }
 
-  detail::spawned_thread_base* spawned_thread_;
+  detail::spawned_thread* spawned_thread_;
   Executor executor_;
   asio::error_code* ec_;
 #endif // !defined(GENERATING_DOCUMENTATION)
@@ -335,6 +205,8 @@ typedef basic_yield_context<any_io_executor> yield_context;
  * @defgroup spawn asio::spawn
  *
  * @brief Start a new stackful coroutine.
+ *
+ * @sa @ref overview_spawn "Stackful coroutines"
  *
  * The spawn() function is a high-level wrapper over the Boost.Coroutine
  * library. This function enables programs to implement asynchronous logic in a
@@ -508,9 +380,6 @@ auto spawn(const basic_yield_context<Executor>& ctx, F&& function,
           declval<detail::initiate_spawn<Executor>>(),
           token, static_cast<F&&>(function)));
 
-#if defined(ASIO_HAS_BOOST_CONTEXT_FIBER) \
-  || defined(GENERATING_DOCUMENTATION)
-
 /// Start a new stackful coroutine that executes on a given executor.
 /**
  * This function is used to launch a new stackful coroutine using the
@@ -519,8 +388,8 @@ auto spawn(const basic_yield_context<Executor>& ctx, F&& function,
  * @param ex Identifies the executor that will run the stackful coroutine.
  *
  * @param stack_allocator Denotes the allocator to be used to allocate the
- * underlying coroutine's stack. The type must satisfy the stack-allocator
- * concept defined by the Boost.Context library.
+ * underlying coroutine's stack. The type must meet the StackAllocator
+ * requirements.
  *
  * @param function The coroutine function. The function must be callable the
  * signature:
@@ -571,8 +440,8 @@ auto spawn(const Executor& ex, allocator_arg_t,
  * coroutine.
  *
  * @param stack_allocator Denotes the allocator to be used to allocate the
- * underlying coroutine's stack. The type must satisfy the stack-allocator
- * concept defined by the Boost.Context library.
+ * underlying coroutine's stack. The type must meet the StackAllocator
+ * requirements.
  *
  * @param function The coroutine function. The function must be callable the
  * signature:
@@ -632,8 +501,8 @@ auto spawn(ExecutionContext& ctx, allocator_arg_t,
  * strand.
  *
  * @param stack_allocator Denotes the allocator to be used to allocate the
- * underlying coroutine's stack. The type must satisfy the stack-allocator
- * concept defined by the Boost.Context library.
+ * underlying coroutine's stack. The type must meet the StackAllocator
+ * requirements.
  *
  * @param function The coroutine function. The function must be callable the
  * signature:
@@ -676,15 +545,21 @@ auto spawn(const basic_yield_context<Executor>& ctx, allocator_arg_t,
           static_cast<StackAllocator&&>(stack_allocator),
           static_cast<F&&>(function)));
 
-#endif // defined(ASIO_HAS_BOOST_CONTEXT_FIBER)
-       //   || defined(GENERATING_DOCUMENTATION)
-
 /*@}*/
 
+ASIO_INLINE_NAMESPACE_END
 } // namespace asio
 
 #include "asio/detail/pop_options.hpp"
 
 #include "asio/impl/spawn.hpp"
+
+#else // defined(ASIO_HAS_BOOST_CONTEXT_FIBER)
+      //   || defined(ASIO_HAS_ASM_FIBER)
+      //   || defined(GENERATING_DOCUMENTATION)
+# error No spawn() implementation available
+#endif // defined(ASIO_HAS_BOOST_CONTEXT_FIBER)
+       //   || defined(ASIO_HAS_ASM_FIBER)
+       //   || defined(GENERATING_DOCUMENTATION)
 
 #endif // ASIO_SPAWN_HPP

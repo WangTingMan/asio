@@ -2,7 +2,7 @@
 // custom_tracking.hpp
 // ~~~~~~~~~~~~~~~~~~~
 //
-// Copyright (c) 2003-2025 Christopher M. Kohlhoff (chris at kohlhoff dot com)
+// Copyright (c) 2003-2026 Christopher M. Kohlhoff (chris at kohlhoff dot com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -83,8 +83,15 @@ struct custom_tracking
 
   // Record the creation of a tracked handler.
   static void creation(asio::execution_context& /*ctx*/,
-      tracked_handler& h, const char* object_type, void* /*object*/,
+      tracked_handler& h, const char* object_type, void* object,
       std::uintmax_t native_handle, const char* op_name)
+  {
+    creation(h, object_type, object, native_handle, op_name);
+  }
+
+  // Record the creation of a tracked handler.
+  static void creation(tracked_handler& h, const char* object_type,
+      void* /*object*/, std::uintmax_t native_handle, const char* op_name)
   {
     // Generate a unique id for the new handler.
     static std::atomic<std::uintmax_t> next_handler_id{1};

@@ -2,7 +2,7 @@
 // detail/io_uring_descriptor_service.hpp
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //
-// Copyright (c) 2003-2025 Christopher M. Kohlhoff (chris at kohlhoff dot com)
+// Copyright (c) 2003-2026 Christopher M. Kohlhoff (chris at kohlhoff dot com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -16,6 +16,7 @@
 #endif // defined(_MSC_VER) && (_MSC_VER >= 1200)
 
 #include "asio/detail/config.hpp"
+#include "asio/detail/io_control.hpp"
 
 #if defined(ASIO_HAS_IO_URING)
 
@@ -39,6 +40,7 @@
 #include "asio/detail/push_options.hpp"
 
 namespace asio {
+ASIO_INLINE_NAMESPACE_BEGIN
 namespace detail {
 
 class io_uring_descriptor_service :
@@ -136,6 +138,14 @@ public:
   asio::error_code io_control(implementation_type& impl,
       IO_Control_Command& command, asio::error_code& ec)
   {
+    const char* descriptor_name = 0;
+    if (get_descriptor_name(command, descriptor_name, ec))
+    {
+      // Descriptor name is unused.
+      ASIO_ERROR_LOCATION(ec);
+      return ec;
+    }
+
     descriptor_ops::ioctl(impl.descriptor_, impl.state_,
         command.name(), static_cast<ioctl_arg_type*>(command.data()), ec);
     ASIO_ERROR_LOCATION(ec);
@@ -207,7 +217,7 @@ public:
       Handler& handler, const IoExecutor& io_ex)
   {
     bool is_continuation =
-      asio_handler_cont_helpers::is_continuation(handler);
+      ASIO_VERSIONED_NAME(handler_cont_helpers)::is_continuation(handler);
 
     associated_cancellation_slot_t<Handler> slot
       = asio::get_associated_cancellation_slot(handler);
@@ -302,7 +312,7 @@ public:
       const IoExecutor& io_ex)
   {
     bool is_continuation =
-      asio_handler_cont_helpers::is_continuation(handler);
+      ASIO_VERSIONED_NAME(handler_cont_helpers)::is_continuation(handler);
 
     associated_cancellation_slot_t<Handler> slot
       = asio::get_associated_cancellation_slot(handler);
@@ -338,7 +348,7 @@ public:
       const null_buffers&, Handler& handler, const IoExecutor& io_ex)
   {
     bool is_continuation =
-      asio_handler_cont_helpers::is_continuation(handler);
+      ASIO_VERSIONED_NAME(handler_cont_helpers)::is_continuation(handler);
 
     associated_cancellation_slot_t<Handler> slot
       = asio::get_associated_cancellation_slot(handler);
@@ -407,7 +417,7 @@ public:
       const IoExecutor& io_ex)
   {
     bool is_continuation =
-      asio_handler_cont_helpers::is_continuation(handler);
+      ASIO_VERSIONED_NAME(handler_cont_helpers)::is_continuation(handler);
 
     associated_cancellation_slot_t<Handler> slot
       = asio::get_associated_cancellation_slot(handler);
@@ -492,7 +502,7 @@ public:
       Handler& handler, const IoExecutor& io_ex)
   {
     bool is_continuation =
-      asio_handler_cont_helpers::is_continuation(handler);
+      ASIO_VERSIONED_NAME(handler_cont_helpers)::is_continuation(handler);
 
     associated_cancellation_slot_t<Handler> slot
       = asio::get_associated_cancellation_slot(handler);
@@ -528,7 +538,7 @@ public:
       const null_buffers&, Handler& handler, const IoExecutor& io_ex)
   {
     bool is_continuation =
-      asio_handler_cont_helpers::is_continuation(handler);
+      ASIO_VERSIONED_NAME(handler_cont_helpers)::is_continuation(handler);
 
     associated_cancellation_slot_t<Handler> slot
       = asio::get_associated_cancellation_slot(handler);
@@ -594,7 +604,7 @@ public:
       Handler& handler, const IoExecutor& io_ex)
   {
     bool is_continuation =
-      asio_handler_cont_helpers::is_continuation(handler);
+      ASIO_VERSIONED_NAME(handler_cont_helpers)::is_continuation(handler);
 
     associated_cancellation_slot_t<Handler> slot
       = asio::get_associated_cancellation_slot(handler);
@@ -674,6 +684,7 @@ private:
 };
 
 } // namespace detail
+ASIO_INLINE_NAMESPACE_END
 } // namespace asio
 
 #include "asio/detail/pop_options.hpp"

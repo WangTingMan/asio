@@ -23,6 +23,7 @@
 #include "asio/detail/push_options.hpp"
 
 namespace asio {
+ASIO_INLINE_NAMESPACE_BEGIN
 namespace experimental {
 
 template <typename Allocator = std::allocator<void>>
@@ -56,6 +57,9 @@ struct use_promise_t
   {
     /// Specify @c use_promise_t as the default completion token type.
     typedef use_promise_t<Allocator> default_completion_token_type;
+
+    /// The adapted executor type, without the default completion token.
+    typedef InnerExecutor executor_without_default;
 
     /// Construct the adapted executor from the inner executor type.
     executor_with_default(const InnerExecutor& ex) noexcept
@@ -102,6 +106,7 @@ private:
 ASIO_INLINE_VARIABLE constexpr use_promise_t<> use_promise;
 
 } // namespace experimental
+ASIO_INLINE_NAMESPACE_END
 } // namespace asio
 
 #include "asio/detail/pop_options.hpp"

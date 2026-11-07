@@ -2,7 +2,7 @@
 // redirect_disposition.hpp
 // ~~~~~~~~~~~~~~~~~~~~~~~~
 //
-// Copyright (c) 2003-2025 Christopher M. Kohlhoff (chris at kohlhoff dot com)
+// Copyright (c) 2003-2026 Christopher M. Kohlhoff (chris at kohlhoff dot com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -22,12 +22,15 @@
 #include "asio/detail/push_options.hpp"
 
 namespace asio {
+ASIO_INLINE_NAMESPACE_BEGIN
 
 /// A @ref completion_token adapter used to specify that the disposition
 /// produced by an asynchronous operation is captured to a variable.
 /**
  * The redirect_disposition_t class is used to indicate that any disposition
  * produced by an asynchronous operation is captured to a specified variable.
+ *
+ * @sa @ref overview_token_adapters "Completion token adapters"
  */
 template <typename CompletionToken, ASIO_DISPOSITION Disposition>
 class redirect_disposition_t
@@ -106,6 +109,7 @@ redirect_disposition(CompletionToken&& completion_token, Disposition& d)
       static_cast<CompletionToken&&>(completion_token), d);
 }
 
+ASIO_INLINE_NAMESPACE_END
 } // namespace asio
 
 #include "asio/detail/pop_options.hpp"

@@ -2,7 +2,7 @@
 // detail/deadline_timer_service.hpp
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //
-// Copyright (c) 2003-2025 Christopher M. Kohlhoff (chris at kohlhoff dot com)
+// Copyright (c) 2003-2026 Christopher M. Kohlhoff (chris at kohlhoff dot com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -41,6 +41,7 @@
 #include "asio/detail/push_options.hpp"
 
 namespace asio {
+ASIO_INLINE_NAMESPACE_BEGIN
 namespace detail {
 
 template <typename TimeTraits>
@@ -160,7 +161,7 @@ public:
   {
     if (!impl.might_have_pending_waits)
     {
-      ec = asio::error_code();
+      asio::error::clear(ec);
       return 0;
     }
 
@@ -169,7 +170,7 @@ public:
 
     std::size_t count = scheduler_.cancel_timer(timer_queue_, impl.timer_data);
     impl.might_have_pending_waits = false;
-    ec = asio::error_code();
+    asio::error::clear(ec);
     return count;
   }
 
@@ -179,7 +180,7 @@ public:
   {
     if (!impl.might_have_pending_waits)
     {
-      ec = asio::error_code();
+      asio::error::clear(ec);
       return 0;
     }
 
@@ -190,7 +191,7 @@ public:
         timer_queue_, impl.timer_data, 1);
     if (count == 0)
       impl.might_have_pending_waits = false;
-    ec = asio::error_code();
+    asio::error::clear(ec);
     return count;
   }
 
@@ -218,7 +219,6 @@ public:
   {
     std::size_t count = cancel(impl, ec);
     impl.expiry = expiry_time;
-    ec = asio::error_code();
     return count;
   }
 
@@ -242,7 +242,7 @@ public:
   void wait(implementation_type& impl, asio::error_code& ec)
   {
     time_type now = TimeTraits::now();
-    ec = asio::error_code();
+    asio::error::clear(ec);
     while (TimeTraits::less_than(now, impl.expiry) && !ec)
     {
       this->do_wait(TimeTraits::to_posix_duration(
@@ -292,7 +292,7 @@ private:
     std::this_thread::sleep_for(
         std::chrono::seconds(timeout.total_seconds())
         + std::chrono::microseconds(timeout.total_microseconds()));
-    ec = asio::error_code();
+    asio::error::clear(ec);
 #else // defined(ASIO_WINDOWS_RUNTIME)
     ::timeval tv;
     tv.tv_sec = timeout.total_seconds();
@@ -338,6 +338,7 @@ private:
 };
 
 } // namespace detail
+ASIO_INLINE_NAMESPACE_END
 } // namespace asio
 
 #include "asio/detail/pop_options.hpp"

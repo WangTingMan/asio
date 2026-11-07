@@ -2,7 +2,7 @@
 // impl/config.ipp
 // ~~~~~~~~~~~~~~~
 //
-// Copyright (c) 2003-2025 Christopher M. Kohlhoff (chris at kohlhoff dot com)
+// Copyright (c) 2003-2026 Christopher M. Kohlhoff (chris at kohlhoff dot com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -16,17 +16,20 @@
 #endif // defined(_MSC_VER) && (_MSC_VER >= 1200)
 
 #include "asio/config.hpp"
+#include "asio/detail/throw_exception.hpp"
 #include "asio/detail/concurrency_hint.hpp"
 #include <cctype>
 #include <cstdio>
 #include <cstring>
 #include <cstdlib>
+#include <stdexcept>
 #include <vector>
 #include <utility>
 
 #include "asio/detail/push_options.hpp"
 
 namespace asio {
+ASIO_INLINE_NAMESPACE_BEGIN
 
 config_service::config_service(execution_context& ctx)
   : detail::execution_context_service_base<config_service>(ctx)
@@ -41,6 +44,24 @@ const char* config_service::get_value(const char* /*section*/,
     const char* /*key_name*/, char* /*value*/, std::size_t /*value_len*/) const
 {
   return nullptr;
+}
+
+const char* config::get(const char* section, const char* key_name,
+    const char* default_value, char* value, std::size_t value_len) const
+{
+  if (const char* str = service_.get_value(
+        section, key_name, value, value_len))
+  {
+    if (str != value)
+    {
+      std::size_t len = std::strlen(str);
+      if (len >= value_len)
+        detail::throw_exception(std::out_of_range("config value too long"));
+      std::memcpy(value, str, len + 1);
+    }
+    return value;
+  }
+  return default_value;
 }
 
 namespace detail {
@@ -338,6 +359,7 @@ void config_from_env::make(execution_context& ctx) const
   (void)make_service<detail::config_from_env_service>(ctx, prefix_);
 }
 
+ASIO_INLINE_NAMESPACE_END
 } // namespace asio
 
 #include "asio/detail/pop_options.hpp"

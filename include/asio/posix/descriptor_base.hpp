@@ -2,7 +2,7 @@
 // posix/descriptor_base.hpp
 // ~~~~~~~~~~~~~~~~~~~~~~~~~
 //
-// Copyright (c) 2003-2025 Christopher M. Kohlhoff (chris at kohlhoff dot com)
+// Copyright (c) 2003-2026 Christopher M. Kohlhoff (chris at kohlhoff dot com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -26,6 +26,7 @@
 #include "asio/detail/push_options.hpp"
 
 namespace asio {
+ASIO_INLINE_NAMESPACE_BEGIN
 namespace posix {
 
 /// The descriptor_base class is used as a base for the descriptor class as a
@@ -72,6 +73,38 @@ public:
   typedef asio::detail::io_control::bytes_readable bytes_readable;
 #endif
 
+  /// I/O control command to name a descriptor.
+  /**
+   * Implements a custom I/O control command that gives the descriptor a name.
+   * Whether the name is used is backend-dependent. It is currently used by the
+   * spin reactor, to look up per-descriptor configuration. The name is not
+   * required to be unique.
+   *
+   * @note The string is stored by pointer in the I/O control command object, so
+   * the caller must ensure that it is valid across the call to @c io_control.
+   *
+   * @par Example
+   * @code
+   * asio::posix::stream_descriptor d(my_context, fd);
+   * ...
+   * asio::posix::descriptor_base::descriptor_name name("xyzzy");
+   * d.io_control(name);
+   * @endcode
+   *
+   * @par
+   * With a string configuration, specified via asio::config_from_string:
+   * @code
+   * reactor.descriptors.xyzzy.priority=10
+   * reactor.descriptors.xyzzy.interval=4
+   * reactor.descriptors.xyzzy.offset=1
+   * @endcode
+   */
+#if defined(GENERATING_DOCUMENTATION)
+  typedef implementation_defined descriptor_name;
+#else
+  typedef asio::detail::io_control::descriptor_name descriptor_name;
+#endif
+
 protected:
   /// Protected destructor to prevent deletion through this type.
   ~descriptor_base()
@@ -80,6 +113,7 @@ protected:
 };
 
 } // namespace posix
+ASIO_INLINE_NAMESPACE_END
 } // namespace asio
 
 #include "asio/detail/pop_options.hpp"

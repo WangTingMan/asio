@@ -2,7 +2,7 @@
 // experimental/impl/parallel_group.hpp
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //
-// Copyright (c) 2003-2025 Christopher M. Kohlhoff (chris at kohlhoff dot com)
+// Copyright (c) 2003-2026 Christopher M. Kohlhoff (chris at kohlhoff dot com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -29,6 +29,7 @@
 #include "asio/detail/push_options.hpp"
 
 namespace asio {
+ASIO_INLINE_NAMESPACE_BEGIN
 namespace experimental {
 namespace detail {
 
@@ -315,11 +316,7 @@ struct parallel_group_op_launcher
 template <std::size_t I, typename Op>
 struct parallel_group_op_launcher<I, Op,
     enable_if_t<
-      is_same<
-        typename associated_executor<
-          Op>::asio_associated_executor_is_unspecialised,
-        void
-      >::value
+      !asio::detail::has_associated_executor<Op, inline_executor>::value
     >>
 {
   template <typename Condition, typename Handler, typename... Ops>
@@ -343,12 +340,13 @@ struct parallel_group_cancellation_handler
 
   void operator()(cancellation_type_t cancel_type)
   {
-    // If we are the first place to request cancellation, i.e. no operation has
-    // yet completed and requested cancellation, emit a signal for each
-    // operation in the group.
+    // If we are the first place to request terminal cancellation, i.e. no
+    // operation has yet completed and requested cancellation, emit a signal for
+    // each operation in the group.
     if (cancel_type != cancellation_type::none)
       if (auto state = state_.lock())
-        if (state->cancellations_requested_++ == 0)
+        if (!(cancel_type & cancellation_type::terminal)
+            || state->cancellations_requested_++ == 0)
           for (std::size_t i = 0; i < sizeof...(Ops); ++i)
             state->cancellation_signals_[i].emit(cancel_type);
   }
@@ -657,6 +655,44 @@ struct ranged_parallel_group_op_handler_with_executor :
   cancel_proxy* cancel_proxy_;
 };
 
+// Helper to launch an operation using the correct executor, if any.
+template <typename Op, typename = void>
+struct ranged_parallel_group_op_launcher
+{
+  template <typename Condition, typename Handler, typename Allocator>
+  static void launch(Op& op,
+    const std::shared_ptr<ranged_parallel_group_state<
+      Condition, Handler, Op, Allocator>>& state,
+    std::size_t idx)
+  {
+    typedef associated_executor_t<Op> ex_type;
+    ex_type ex = asio::get_associated_executor(op);
+    std::move(op)(
+        ranged_parallel_group_op_handler_with_executor<
+          ex_type, Condition, Handler, Op, Allocator>(
+            state, std::move(ex), idx));
+  }
+};
+
+// Specialised launcher for operations that specify no executor.
+template <typename Op>
+struct ranged_parallel_group_op_launcher<Op,
+    enable_if_t<
+      !asio::detail::has_associated_executor<Op, inline_executor>::value
+    >>
+{
+  template <typename Condition, typename Handler, typename Allocator>
+  static void launch(Op& op,
+    const std::shared_ptr<ranged_parallel_group_state<
+      Condition, Handler, Op, Allocator>>& state,
+    std::size_t idx)
+  {
+    std::move(op)(
+        ranged_parallel_group_op_handler<
+          Condition, Handler, Op, Allocator>(state, idx));
+  }
+};
+
 template <typename Condition, typename Handler, typename Op, typename Allocator>
 struct ranged_parallel_group_cancellation_handler
 {
@@ -669,12 +705,13 @@ struct ranged_parallel_group_cancellation_handler
 
   void operator()(cancellation_type_t cancel_type)
   {
-    // If we are the first place to request cancellation, i.e. no operation has
-    // yet completed and requested cancellation, emit a signal for each
-    // operation in the group.
+    // If we are the first place to request terminal cancellation, i.e. no
+    // operation has yet completed and requested cancellation, emit a signal for
+    // each operation in the group.
     if (cancel_type != cancellation_type::none)
       if (auto state = state_.lock())
-        if (state->cancellations_requested_++ == 0)
+        if (!(cancel_type & cancellation_type::terminal)
+            || state->cancellations_requested_++ == 0)
           for (std::size_t i = 0; i < state->cancellation_signals_.size(); ++i)
             state->cancellation_signals_[i].emit(cancel_type);
   }
@@ -708,14 +745,7 @@ void ranged_parallel_group_launch(Condition cancellation_condition,
   std::size_t idx = 0;
   std::size_t range_size = range.size();
   for (auto&& op : std::forward<Range>(range))
-  {
-    typedef associated_executor_t<op_type> ex_type;
-    ex_type ex = asio::get_associated_executor(op);
-    std::move(op)(
-        ranged_parallel_group_op_handler_with_executor<
-          ex_type, Condition, Handler, op_type, Allocator>(
-            state, std::move(ex), idx++));
-  }
+    ranged_parallel_group_op_launcher<op_type>::launch(op, state, idx++);
 
   // Check if any of the operations has already requested cancellation, and if
   // so, emit a signal for each operation in the group.
@@ -782,6 +812,7 @@ struct associator<Associator,
   }
 };
 
+ASIO_INLINE_NAMESPACE_END
 } // namespace asio
 
 #include "asio/detail/pop_options.hpp"

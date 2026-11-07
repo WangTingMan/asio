@@ -2,7 +2,7 @@
 // impl/write.hpp
 // ~~~~~~~~~~~~~~
 //
-// Copyright (c) 2003-2025 Christopher M. Kohlhoff (chris at kohlhoff dot com)
+// Copyright (c) 2003-2026 Christopher M. Kohlhoff (chris at kohlhoff dot com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -28,10 +28,12 @@
 #include "asio/detail/handler_type_requirements.hpp"
 #include "asio/detail/non_const_lvalue.hpp"
 #include "asio/detail/throw_error.hpp"
+#include "asio/error.hpp"
 
 #include "asio/detail/push_options.hpp"
 
 namespace asio {
+ASIO_INLINE_NAMESPACE_BEGIN
 
 namespace detail
 {
@@ -41,7 +43,7 @@ namespace detail
       const ConstBufferSequence& buffers, const ConstBufferIterator&,
       CompletionCondition completion_condition, asio::error_code& ec)
   {
-    ec = asio::error_code();
+    asio::error::clear(ec);
     asio::detail::consuming_buffers<const_buffer,
         ConstBufferSequence, ConstBufferIterator> tmp(buffers);
     while (!tmp.empty())
@@ -325,27 +327,11 @@ namespace detail
     {
     }
 
-    write_op(const write_op& other)
-      : base_from_cancellation_state<WriteHandler>(other),
-        base_from_completion_cond<CompletionCondition>(other),
-        stream_(other.stream_),
-        buffers_(other.buffers_),
-        start_(other.start_),
-        handler_(other.handler_)
-    {
-    }
+    write_op(const write_op& other) = default;
+    write_op(write_op&& other) = default;
 
-    write_op(write_op&& other)
-      : base_from_cancellation_state<WriteHandler>(
-          static_cast<base_from_cancellation_state<WriteHandler>&&>(other)),
-        base_from_completion_cond<CompletionCondition>(
-          static_cast<base_from_completion_cond<CompletionCondition>&&>(other)),
-        stream_(other.stream_),
-        buffers_(static_cast<buffers_type&&>(other.buffers_)),
-        start_(other.start_),
-        handler_(static_cast<WriteHandler&&>(other.handler_))
-    {
-    }
+    write_op& operator=(const write_op&) = delete;
+    write_op& operator=(write_op&&) = delete;
 
     void operator()(asio::error_code ec,
         std::size_t bytes_transferred, int start = 0)
@@ -376,7 +362,7 @@ namespace detail
           }
         }
 
-        static_cast<WriteHandler&&>(handler_)(
+        ASIO_INVOKE_INLINE static_cast<WriteHandler&&>(handler_)(
             static_cast<const asio::error_code&>(ec),
             static_cast<const std::size_t&>(buffers_.total_consumed()));
       }
@@ -400,7 +386,7 @@ namespace detail
         CompletionCondition, WriteHandler>* this_handler)
   {
     return this_handler->start_ == 0 ? true
-      : asio_handler_cont_helpers::is_continuation(
+      : ASIO_VERSIONED_NAME(handler_cont_helpers)::is_continuation(
           this_handler->handler_);
   }
 
@@ -507,23 +493,11 @@ namespace detail
     {
     }
 
-    write_dynbuf_v1_op(const write_dynbuf_v1_op& other)
-      : stream_(other.stream_),
-        buffers_(other.buffers_),
-        completion_condition_(other.completion_condition_),
-        handler_(other.handler_)
-    {
-    }
+    write_dynbuf_v1_op(const write_dynbuf_v1_op& other) = default;
+    write_dynbuf_v1_op(write_dynbuf_v1_op&& other) = default;
 
-    write_dynbuf_v1_op(write_dynbuf_v1_op&& other)
-      : stream_(other.stream_),
-        buffers_(static_cast<DynamicBuffer_v1&&>(other.buffers_)),
-        completion_condition_(
-          static_cast<CompletionCondition&&>(
-            other.completion_condition_)),
-        handler_(static_cast<WriteHandler&&>(other.handler_))
-    {
-    }
+    write_dynbuf_v1_op& operator=(const write_dynbuf_v1_op&) = delete;
+    write_dynbuf_v1_op& operator=(write_dynbuf_v1_op&&) = delete;
 
     void operator()(const asio::error_code& ec,
         std::size_t bytes_transferred, int start = 0)
@@ -554,7 +528,7 @@ namespace detail
       write_dynbuf_v1_op<AsyncWriteStream, DynamicBuffer_v1,
         CompletionCondition, WriteHandler>* this_handler)
   {
-    return asio_handler_cont_helpers::is_continuation(
+    return ASIO_VERSIONED_NAME(handler_cont_helpers)::is_continuation(
         this_handler->handler_);
   }
 
@@ -651,23 +625,11 @@ namespace detail
     {
     }
 
-    write_dynbuf_v2_op(const write_dynbuf_v2_op& other)
-      : stream_(other.stream_),
-        buffers_(other.buffers_),
-        completion_condition_(other.completion_condition_),
-        handler_(other.handler_)
-    {
-    }
+    write_dynbuf_v2_op(const write_dynbuf_v2_op& other) = default;
+    write_dynbuf_v2_op(write_dynbuf_v2_op&& other) = default;
 
-    write_dynbuf_v2_op(write_dynbuf_v2_op&& other)
-      : stream_(other.stream_),
-        buffers_(static_cast<DynamicBuffer_v2&&>(other.buffers_)),
-        completion_condition_(
-          static_cast<CompletionCondition&&>(
-            other.completion_condition_)),
-        handler_(static_cast<WriteHandler&&>(other.handler_))
-    {
-    }
+    write_dynbuf_v2_op& operator=(const write_dynbuf_v2_op&) = delete;
+    write_dynbuf_v2_op& operator=(write_dynbuf_v2_op&&) = delete;
 
     void operator()(const asio::error_code& ec,
         std::size_t bytes_transferred, int start = 0)
@@ -698,7 +660,7 @@ namespace detail
       write_dynbuf_v2_op<AsyncWriteStream, DynamicBuffer_v2,
         CompletionCondition, WriteHandler>* this_handler)
   {
-    return asio_handler_cont_helpers::is_continuation(
+    return ASIO_VERSIONED_NAME(handler_cont_helpers)::is_continuation(
         this_handler->handler_);
   }
 
@@ -773,6 +735,7 @@ struct associator<Associator,
 
 #endif // !defined(GENERATING_DOCUMENTATION)
 
+ASIO_INLINE_NAMESPACE_END
 } // namespace asio
 
 #include "asio/detail/pop_options.hpp"

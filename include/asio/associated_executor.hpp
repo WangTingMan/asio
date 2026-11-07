@@ -2,7 +2,7 @@
 // associated_executor.hpp
 // ~~~~~~~~~~~~~~~~~~~~~~~
 //
-// Copyright (c) 2003-2025 Christopher M. Kohlhoff (chris at kohlhoff dot com)
+// Copyright (c) 2003-2026 Christopher M. Kohlhoff (chris at kohlhoff dot com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -27,6 +27,7 @@
 #include "asio/detail/push_options.hpp"
 
 namespace asio {
+ASIO_INLINE_NAMESPACE_BEGIN
 
 template <typename T, typename Executor>
 struct associated_executor;
@@ -183,6 +184,16 @@ using associated_executor_t = typename associated_executor<T, Executor>::type;
 namespace detail {
 
 template <typename T, typename E, typename = void>
+struct has_associated_executor : true_type {};
+
+template <typename T, typename E>
+struct has_associated_executor<T, E,
+    void_t<
+      typename associated_executor<T, E>::
+        asio_associated_executor_is_unspecialised
+    >> : false_type {};
+
+template <typename T, typename E, typename = void>
 struct associated_executor_forwarding_base
 {
 };
@@ -190,11 +201,7 @@ struct associated_executor_forwarding_base
 template <typename T, typename E>
 struct associated_executor_forwarding_base<T, E,
     enable_if_t<
-      is_same<
-        typename associated_executor<T,
-          E>::asio_associated_executor_is_unspecialised,
-        void
-      >::value
+      !has_associated_executor<T, E>::value
     >>
 {
   typedef void asio_associated_executor_is_unspecialised;
@@ -229,6 +236,7 @@ struct associated_executor<reference_wrapper<T>, Executor>
   }
 };
 
+ASIO_INLINE_NAMESPACE_END
 } // namespace asio
 
 #include "asio/detail/pop_options.hpp"

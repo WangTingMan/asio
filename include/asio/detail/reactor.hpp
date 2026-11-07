@@ -2,7 +2,7 @@
 // detail/reactor.hpp
 // ~~~~~~~~~~~~~~~~~~
 //
-// Copyright (c) 2003-2025 Christopher M. Kohlhoff (chris at kohlhoff dot com)
+// Copyright (c) 2003-2026 Christopher M. Kohlhoff (chris at kohlhoff dot com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -21,6 +21,8 @@
 # include "asio/detail/null_reactor.hpp"
 #elif defined(ASIO_HAS_IO_URING_AS_DEFAULT)
 # include "asio/detail/null_reactor.hpp"
+#elif defined(ASIO_ENABLE_SPIN_REACTOR)
+# include "asio/detail/spin_reactor.hpp"
 #elif defined(ASIO_HAS_EPOLL)
 # include "asio/detail/epoll_reactor.hpp"
 #elif defined(ASIO_HAS_KQUEUE)
@@ -32,12 +34,15 @@
 #endif
 
 namespace asio {
+ASIO_INLINE_NAMESPACE_BEGIN
 namespace detail {
 
 #if defined(ASIO_HAS_IOCP) || defined(ASIO_WINDOWS_RUNTIME)
 typedef null_reactor reactor;
 #elif defined(ASIO_HAS_IO_URING_AS_DEFAULT)
 typedef null_reactor reactor;
+#elif defined(ASIO_ENABLE_SPIN_REACTOR)
+typedef spin_reactor reactor;
 #elif defined(ASIO_HAS_EPOLL)
 typedef epoll_reactor reactor;
 #elif defined(ASIO_HAS_KQUEUE)
@@ -49,6 +54,7 @@ typedef select_reactor reactor;
 #endif
 
 } // namespace detail
+ASIO_INLINE_NAMESPACE_END
 } // namespace asio
 
 #endif // ASIO_DETAIL_REACTOR_HPP

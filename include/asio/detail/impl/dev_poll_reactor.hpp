@@ -2,7 +2,7 @@
 // detail/impl/dev_poll_reactor.hpp
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //
-// Copyright (c) 2003-2025 Christopher M. Kohlhoff (chris at kohlhoff dot com)
+// Copyright (c) 2003-2026 Christopher M. Kohlhoff (chris at kohlhoff dot com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -24,12 +24,36 @@
 #include "asio/detail/push_options.hpp"
 
 namespace asio {
+ASIO_INLINE_NAMESPACE_BEGIN
 namespace detail {
 
 inline void dev_poll_reactor::post_immediate_completion(
     operation* op, bool is_continuation) const
 {
   scheduler_.post_immediate_completion(op, is_continuation);
+}
+
+template <int OpType, reactor_op::perform_func_type Perform>
+inline bool dev_poll_reactor::start_op(socket_type descriptor,
+    dev_poll_reactor::per_descriptor_data&, reactor_op* op)
+{
+  asio::detail::mutex::scoped_lock lock(mutex_);
+
+  if (Perform != nullptr
+      && (OpType != read_op
+        || !op_queue_[except_op].has_operation(descriptor)))
+  {
+    if (!op_queue_[OpType].has_operation(descriptor))
+    {
+      if (Perform(op))
+      {
+        lock.unlock();
+        return true;
+      }
+    }
+  }
+
+  return start_unready_op(OpType, descriptor, lock, op);
 }
 
 template <typename TimeTraits, typename Allocator>
@@ -108,6 +132,7 @@ void dev_poll_reactor::move_timer(timer_queue<TimeTraits, Allocator>& queue,
 }
 
 } // namespace detail
+ASIO_INLINE_NAMESPACE_END
 } // namespace asio
 
 #include "asio/detail/pop_options.hpp"

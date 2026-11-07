@@ -2,7 +2,7 @@
 // associated_allocator.hpp
 // ~~~~~~~~~~~~~~~~~~~~~~~~
 //
-// Copyright (c) 2003-2025 Christopher M. Kohlhoff (chris at kohlhoff dot com)
+// Copyright (c) 2003-2026 Christopher M. Kohlhoff (chris at kohlhoff dot com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -24,6 +24,7 @@
 #include "asio/detail/push_options.hpp"
 
 namespace asio {
+ASIO_INLINE_NAMESPACE_BEGIN
 
 template <typename T, typename Allocator>
 struct associated_allocator;
@@ -109,6 +110,8 @@ struct associated_allocator_impl<T, A,
  * @li Provide a noexcept static member function named @c get, callable as @c
  * get(t,a) and with return type @c type or a (possibly const) reference to @c
  * type.
+ *
+ * @sa @ref overview_allocation "Custom memory allocation"
  */
 template <typename T, typename Allocator = std::allocator<void>>
 struct associated_allocator
@@ -161,6 +164,16 @@ using associated_allocator_t
 namespace detail {
 
 template <typename T, typename A, typename = void>
+struct has_associated_allocator : true_type {};
+
+template <typename T, typename A>
+struct has_associated_allocator<T, A,
+    void_t<
+      typename associated_allocator<T, A>::
+        asio_associated_allocator_is_unspecialised
+    >> : false_type {};
+
+template <typename T, typename A, typename = void>
 struct associated_allocator_forwarding_base
 {
 };
@@ -168,11 +181,7 @@ struct associated_allocator_forwarding_base
 template <typename T, typename A>
 struct associated_allocator_forwarding_base<T, A,
     enable_if_t<
-      is_same<
-        typename associated_allocator<T,
-          A>::asio_associated_allocator_is_unspecialised,
-        void
-      >::value
+      !has_associated_allocator<T, A>::value
     >>
 {
   typedef void asio_associated_allocator_is_unspecialised;
@@ -207,6 +216,7 @@ struct associated_allocator<reference_wrapper<T>, Allocator>
   }
 };
 
+ASIO_INLINE_NAMESPACE_END
 } // namespace asio
 
 #include "asio/detail/pop_options.hpp"

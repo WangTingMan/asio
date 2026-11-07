@@ -1,5 +1,5 @@
 [/
- / Copyright (c) 2003-2025 Christopher M. Kohlhoff (chris at kohlhoff dot com)
+ / Copyright (c) 2003-2026 Christopher M. Kohlhoff (chris at kohlhoff dot com)
  /
  / Distributed under the Boost Software License, Version 1.0. (See accompanying
  / file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -240,6 +240,26 @@ functionality, and behaviour of Asio.
     ]
   ]
   [
+    [`ASIO_ENABLE_SPIN_REACTOR`]
+    [
+      Selects the spin reactor, in place of the platform's default reactor.
+
+      The spin reactor treats all descriptors as perpetually ready, and in
+      doing so avoids calls to demultiplexing system calls such as
+      [^epoll_wait] and [^select]. Each operation is instead attempted when
+      the reactor next offers its queue to the scheduler, and it is the
+      outcome of that attempt which establishes readiness.
+
+      The order in which descriptors are offered, and how often, may be
+      configured per descriptor. See [link
+      asio.overview.core.configuration Runtime Configuration and Concurrency
+      Hints] for the available configuration keys.
+
+      Has no effect when I/O completion ports, the Windows Runtime, or
+      [^io_uring] as the default backend are in use.
+    ]
+  ]
+  [
     [`ASIO_DISABLE_DEV_POLL`]
     [
       Explicitly disables [^/dev/poll] support on Solaris, forcing the use of
@@ -308,6 +328,14 @@ functionality, and behaviour of Asio.
       support (i.e. [^ws2_32.lib] and [^mswsock.lib], or [^ws2.lib] when
       building for Windows CE). The `ASIO_NO_DEFAULT_LINKED_LIBS` macro
       prevents these libraries from being linked.
+    ]
+  ]
+  [
+    [`ASIO_USE_UTF8`]
+    [
+      On Windows, the messages returned by `asio::system_category()` are
+      encoded using the ANSI code page by default. Define `ASIO_USE_UTF8` to
+      have them encoded as UTF-8 instead.
     ]
   ]
   [
@@ -403,6 +431,15 @@ functionality, and behaviour of Asio.
 
       Note: If symbols are hidden, extra care must be taken to ensure that Asio
       types are not passed across shared library API boundaries.
+    ]
+  ]
+  [
+    [`ASIO_ENABLE_VALGRIND`]
+    [
+      Enables support for running programs under Valgrind. When `spawn()` is
+      implemented without Boost.Context, each coroutine's stack is registered
+      with Valgrind so that switching between stacks is not reported as an
+      error. Requires the [^valgrind/valgrind.h] header.
     ]
   ]
 ]

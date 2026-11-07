@@ -2,7 +2,7 @@
 // composed.hpp
 // ~~~~~~~~~~~~
 //
-// Copyright (c) 2003-2025 Christopher M. Kohlhoff (chris at kohlhoff dot com)
+// Copyright (c) 2003-2026 Christopher M. Kohlhoff (chris at kohlhoff dot com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -26,6 +26,7 @@
 #include "asio/detail/push_options.hpp"
 
 namespace asio {
+ASIO_INLINE_NAMESPACE_BEGIN
 namespace detail {
 
 template <typename Impl, typename Work,
@@ -50,15 +51,7 @@ public:
   {
   }
 
-  composed_op(composed_op&& other)
-    : base_from_cancellation_state<Handler>(
-        static_cast<base_from_cancellation_state<Handler>&&>(other)),
-      impl_(static_cast<Impl&&>(other.impl_)),
-      work_(static_cast<Work&&>(other.work_)),
-      handler_(static_cast<Handler&&>(other.handler_)),
-      invocations_(other.invocations_)
-  {
-  }
+  composed_op(composed_op&& other) = default;
 
   typedef typename composed_work_guard<
     typename Work::head_type>::executor_type io_executor_type;
@@ -186,7 +179,7 @@ inline bool asio_handler_is_continuation(
     composed_op<Impl, Work, Handler, Signature>* this_handler)
 {
   return this_handler->invocations_ > 1 ? true
-    : asio_handler_cont_helpers::is_continuation(
+    : ASIO_VERSIONED_NAME(handler_cont_helpers)::is_continuation(
         this_handler->handler_);
 }
 
@@ -406,6 +399,7 @@ inline auto composed(Implementation&& implementation,
             io_objects_or_executors))...));
 }
 
+ASIO_INLINE_NAMESPACE_END
 } // namespace asio
 
 #include "asio/detail/pop_options.hpp"

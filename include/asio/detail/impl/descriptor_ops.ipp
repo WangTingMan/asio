@@ -2,7 +2,7 @@
 // detail/impl/descriptor_ops.ipp
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //
-// Copyright (c) 2003-2025 Christopher M. Kohlhoff (chris at kohlhoff dot com)
+// Copyright (c) 2003-2026 Christopher M. Kohlhoff (chris at kohlhoff dot com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -22,11 +22,12 @@
 
 #if !defined(ASIO_WINDOWS) \
   && !defined(ASIO_WINDOWS_RUNTIME) \
-  && !defined(__CYGWIN__)
+  && !defined(ASIO_CYGWIN_W32_SOCKETS)
 
 #include "asio/detail/push_options.hpp"
 
 namespace asio {
+ASIO_INLINE_NAMESPACE_BEGIN
 namespace detail {
 namespace descriptor_ops {
 
@@ -228,6 +229,98 @@ bool set_internal_non_blocking(int d, state_type& state,
   return false;
 }
 
+inline int poll_read(int d, state_type state, int& err)
+{
+  if (d == -1)
+  {
+    err = asio::error::bad_descriptor;
+    return -1;
+  }
+
+  pollfd fds;
+  fds.fd = d;
+  fds.events = POLLIN;
+  fds.revents = 0;
+  int timeout = (state & user_set_non_blocking) ? 0 : -1;
+  int result = ::poll(&fds, 1, timeout);
+  err = descriptor_ops::get_last_sys_error(result < 0);
+  if (result == 0)
+    if (state & user_set_non_blocking)
+      err = asio::error::would_block;
+  return result;
+}
+
+int poll_read(int d, state_type state, asio::error_code& ec)
+{
+  int err = 0;
+  int result = descriptor_ops::poll_read(d, state, err);
+  descriptor_ops::assign_sys_error(ec, err);
+  return result;
+}
+
+inline int poll_write(int d, state_type state, int& err)
+{
+  if (d == -1)
+  {
+    err = asio::error::bad_descriptor;
+    return -1;
+  }
+
+  pollfd fds;
+  fds.fd = d;
+  fds.events = POLLOUT;
+  fds.revents = 0;
+  int timeout = (state & user_set_non_blocking) ? 0 : -1;
+  int result = ::poll(&fds, 1, timeout);
+  err = descriptor_ops::get_last_sys_error(result < 0);
+  if (result == 0)
+    if (state & user_set_non_blocking)
+      err = asio::error::would_block;
+  return result;
+}
+
+int poll_write(int d, state_type state, asio::error_code& ec)
+{
+  int err = 0;
+  int result = descriptor_ops::poll_write(d, state, err);
+  descriptor_ops::assign_sys_error(ec, err);
+  return result;
+}
+
+inline int poll_error(int d, state_type state, int& err)
+{
+  if (d == -1)
+  {
+    err = asio::error::bad_descriptor;
+    return -1;
+  }
+
+  pollfd fds;
+  fds.fd = d;
+  fds.events = POLLPRI | POLLERR | POLLHUP;
+  fds.revents = 0;
+  int timeout = (state & user_set_non_blocking) ? 0 : -1;
+  int result = ::poll(&fds, 1, timeout);
+  err = descriptor_ops::get_last_sys_error(result < 0);
+  if (result == 0)
+    if (state & user_set_non_blocking)
+      err = asio::error::would_block;
+  return result;
+}
+
+int poll_error(int d, state_type state, asio::error_code& ec)
+{
+  int err = 0;
+  int result = descriptor_ops::poll_error(d, state, err);
+  descriptor_ops::assign_sys_error(ec, err);
+  return result;
+}
+
+inline ASIO_NEVER_INLINE void assign_eof(asio::error_code& ec)
+{
+  ec = asio::error::eof;
+}
+
 std::size_t sync_read(int d, state_type state, buf* bufs,
     std::size_t count, bool all_empty, asio::error_code& ec)
 {
@@ -245,15 +338,19 @@ std::size_t sync_read(int d, state_type state, buf* bufs,
   }
 
   // Read some data.
+  int err = 0;
   for (;;)
   {
     // Try to complete the operation without blocking.
     signed_size_type bytes = ::readv(d, bufs, static_cast<int>(count));
-    get_last_error(ec, bytes < 0);
+    err = descriptor_ops::get_last_sys_error(bytes < 0);
 
     // Check if operation succeeded.
     if (bytes > 0)
+    {
+      asio::error::clear(ec);
       return bytes;
+    }
 
     // Check for EOF.
     if (bytes == 0)
@@ -264,14 +361,17 @@ std::size_t sync_read(int d, state_type state, buf* bufs,
 
     // Operation failed.
     if ((state & user_set_non_blocking)
-        || (ec != asio::error::would_block
-          && ec != asio::error::try_again))
-      return 0;
+        || (err != asio::error::would_block
+          && err != asio::error::try_again))
+      break;
 
     // Wait for descriptor to become ready.
-    if (descriptor_ops::poll_read(d, 0, ec) < 0)
-      return 0;
+    if (descriptor_ops::poll_read(d, 0, err) < 0)
+      break;
   }
+
+  descriptor_ops::assign_sys_error(ec, err);
+  return 0;
 }
 
 std::size_t sync_read1(int d, state_type state, void* data,
@@ -291,15 +391,19 @@ std::size_t sync_read1(int d, state_type state, void* data,
   }
 
   // Read some data.
+  int err = 0;
   for (;;)
   {
     // Try to complete the operation without blocking.
     signed_size_type bytes = ::read(d, data, size);
-    get_last_error(ec, bytes < 0);
+    err = descriptor_ops::get_last_sys_error(bytes < 0);
 
     // Check if operation succeeded.
     if (bytes > 0)
+    {
+      asio::error::clear(ec);
       return bytes;
+    }
 
     // Check for EOF.
     if (bytes == 0)
@@ -310,14 +414,17 @@ std::size_t sync_read1(int d, state_type state, void* data,
 
     // Operation failed.
     if ((state & user_set_non_blocking)
-        || (ec != asio::error::would_block
-          && ec != asio::error::try_again))
-      return 0;
+        || (err != asio::error::would_block
+          && err != asio::error::try_again))
+      break;
 
     // Wait for descriptor to become ready.
-    if (descriptor_ops::poll_read(d, 0, ec) < 0)
-      return 0;
+    if (descriptor_ops::poll_read(d, 0, err) < 0)
+      break;
   }
+
+  descriptor_ops::assign_sys_error(ec, err);
+  return 0;
 }
 
 bool non_blocking_read(int d, buf* bufs, std::size_t count,
@@ -327,29 +434,32 @@ bool non_blocking_read(int d, buf* bufs, std::size_t count,
   {
     // Read some data.
     signed_size_type bytes = ::readv(d, bufs, static_cast<int>(count));
-    get_last_error(ec, bytes < 0);
+    int err = descriptor_ops::get_last_sys_error(bytes < 0);
 
     // Check for end of stream.
     if (bytes == 0)
     {
-      ec = asio::error::eof;
+      descriptor_ops::assign_eof(ec);
       return true;
     }
 
     // Check if operation succeeded.
     if (bytes > 0)
     {
+      asio::error::clear(ec);
       bytes_transferred = bytes;
       return true;
     }
 
     // Retry operation if interrupted by signal.
-    if (ec == asio::error::interrupted)
+    if (err == asio::error::interrupted)
       continue;
 
+    descriptor_ops::assign_sys_error(ec, err);
+
     // Check if we need to run the operation again.
-    if (ec == asio::error::would_block
-        || ec == asio::error::try_again)
+    if (err == asio::error::would_block
+        || err == asio::error::try_again)
       return false;
 
     // Operation failed.
@@ -365,29 +475,32 @@ bool non_blocking_read1(int d, void* data, std::size_t size,
   {
     // Read some data.
     signed_size_type bytes = ::read(d, data, size);
-    get_last_error(ec, bytes < 0);
+    int err = descriptor_ops::get_last_sys_error(bytes < 0);
 
     // Check for end of stream.
     if (bytes == 0)
     {
-      ec = asio::error::eof;
+      descriptor_ops::assign_eof(ec);
       return true;
     }
 
     // Check if operation succeeded.
     if (bytes > 0)
     {
+      asio::error::clear(ec);
       bytes_transferred = bytes;
       return true;
     }
 
     // Retry operation if interrupted by signal.
-    if (ec == asio::error::interrupted)
+    if (err == asio::error::interrupted)
       continue;
 
+    descriptor_ops::assign_sys_error(ec, err);
+
     // Check if we need to run the operation again.
-    if (ec == asio::error::would_block
-        || ec == asio::error::try_again)
+    if (err == asio::error::would_block
+        || err == asio::error::try_again)
       return false;
 
     // Operation failed.
@@ -413,26 +526,33 @@ std::size_t sync_write(int d, state_type state, const buf* bufs,
   }
 
   // Write some data.
+  int err = 0;
   for (;;)
   {
     // Try to complete the operation without blocking.
     signed_size_type bytes = ::writev(d, bufs, static_cast<int>(count));
-    get_last_error(ec, bytes < 0);
+    err = descriptor_ops::get_last_sys_error(bytes < 0);
 
     // Check if operation succeeded.
     if (bytes > 0)
+    {
+      asio::error::clear(ec);
       return bytes;
+    }
 
     // Operation failed.
     if ((state & user_set_non_blocking)
-        || (ec != asio::error::would_block
-          && ec != asio::error::try_again))
-      return 0;
+        || (err != asio::error::would_block
+          && err != asio::error::try_again))
+      break;
 
     // Wait for descriptor to become ready.
-    if (descriptor_ops::poll_write(d, 0, ec) < 0)
-      return 0;
+    if (descriptor_ops::poll_write(d, 0, err) < 0)
+      break;
   }
+
+  descriptor_ops::assign_sys_error(ec, err);
+  return 0;
 }
 
 std::size_t sync_write1(int d, state_type state, const void* data,
@@ -452,26 +572,33 @@ std::size_t sync_write1(int d, state_type state, const void* data,
   }
 
   // Write some data.
+  int err = 0;
   for (;;)
   {
     // Try to complete the operation without blocking.
     signed_size_type bytes = ::write(d, data, size);
-    get_last_error(ec, bytes < 0);
+    err = descriptor_ops::get_last_sys_error(bytes < 0);
 
     // Check if operation succeeded.
     if (bytes > 0)
+    {
+      asio::error::clear(ec);
       return bytes;
+    }
 
     // Operation failed.
     if ((state & user_set_non_blocking)
-        || (ec != asio::error::would_block
-          && ec != asio::error::try_again))
-      return 0;
+        || (err != asio::error::would_block
+          && err != asio::error::try_again))
+      break;
 
     // Wait for descriptor to become ready.
-    if (descriptor_ops::poll_write(d, 0, ec) < 0)
-      return 0;
+    if (descriptor_ops::poll_write(d, 0, err) < 0)
+      break;
   }
+
+  descriptor_ops::assign_sys_error(ec, err);
+  return 0;
 }
 
 bool non_blocking_write(int d, const buf* bufs, std::size_t count,
@@ -481,22 +608,25 @@ bool non_blocking_write(int d, const buf* bufs, std::size_t count,
   {
     // Write some data.
     signed_size_type bytes = ::writev(d, bufs, static_cast<int>(count));
-    get_last_error(ec, bytes < 0);
+    int err = descriptor_ops::get_last_sys_error(bytes < 0);
 
     // Check if operation succeeded.
     if (bytes >= 0)
     {
+      asio::error::clear(ec);
       bytes_transferred = bytes;
       return true;
     }
 
     // Retry operation if interrupted by signal.
-    if (ec == asio::error::interrupted)
+    if (err == asio::error::interrupted)
       continue;
 
+    descriptor_ops::assign_sys_error(ec, err);
+
     // Check if we need to run the operation again.
-    if (ec == asio::error::would_block
-        || ec == asio::error::try_again)
+    if (err == asio::error::would_block
+        || err == asio::error::try_again)
       return false;
 
     // Operation failed.
@@ -512,22 +642,25 @@ bool non_blocking_write1(int d, const void* data, std::size_t size,
   {
     // Write some data.
     signed_size_type bytes = ::write(d, data, size);
-    get_last_error(ec, bytes < 0);
+    int err = descriptor_ops::get_last_sys_error(bytes < 0);
 
     // Check if operation succeeded.
     if (bytes >= 0)
     {
+      asio::error::clear(ec);
       bytes_transferred = bytes;
       return true;
     }
 
     // Retry operation if interrupted by signal.
-    if (ec == asio::error::interrupted)
+    if (err == asio::error::interrupted)
       continue;
 
+    descriptor_ops::assign_sys_error(ec, err);
+
     // Check if we need to run the operation again.
-    if (ec == asio::error::would_block
-        || ec == asio::error::try_again)
+    if (err == asio::error::would_block
+        || err == asio::error::try_again)
       return false;
 
     // Operation failed.
@@ -555,15 +688,19 @@ std::size_t sync_read_at(int d, state_type state, uint64_t offset,
   }
 
   // Read some data.
+  int err = 0;
   for (;;)
   {
     // Try to complete the operation without blocking.
     signed_size_type bytes = ::preadv(d, bufs, static_cast<int>(count), offset);
-    get_last_error(ec, bytes < 0);
+    err = descriptor_ops::get_last_sys_error(bytes < 0);
 
     // Check if operation succeeded.
     if (bytes > 0)
+    {
+      asio::error::clear(ec);
       return bytes;
+    }
 
     // Check for EOF.
     if (bytes == 0)
@@ -574,14 +711,17 @@ std::size_t sync_read_at(int d, state_type state, uint64_t offset,
 
     // Operation failed.
     if ((state & user_set_non_blocking)
-        || (ec != asio::error::would_block
-          && ec != asio::error::try_again))
-      return 0;
+        || (err != asio::error::would_block
+          && err != asio::error::try_again))
+      break;
 
     // Wait for descriptor to become ready.
-    if (descriptor_ops::poll_read(d, 0, ec) < 0)
-      return 0;
+    if (descriptor_ops::poll_read(d, 0, err) < 0)
+      break;
   }
+
+  descriptor_ops::assign_sys_error(ec, err);
+  return 0;
 }
 
 std::size_t sync_read_at1(int d, state_type state, uint64_t offset,
@@ -601,15 +741,19 @@ std::size_t sync_read_at1(int d, state_type state, uint64_t offset,
   }
 
   // Read some data.
+  int err = 0;
   for (;;)
   {
     // Try to complete the operation without blocking.
     signed_size_type bytes = ::pread(d, data, size, offset);
-    get_last_error(ec, bytes < 0);
+    err = descriptor_ops::get_last_sys_error(bytes < 0);
 
     // Check if operation succeeded.
     if (bytes > 0)
+    {
+      asio::error::clear(ec);
       return bytes;
+    }
 
     // Check for EOF.
     if (bytes == 0)
@@ -620,14 +764,17 @@ std::size_t sync_read_at1(int d, state_type state, uint64_t offset,
 
     // Operation failed.
     if ((state & user_set_non_blocking)
-        || (ec != asio::error::would_block
-          && ec != asio::error::try_again))
-      return 0;
+        || (err != asio::error::would_block
+          && err != asio::error::try_again))
+      break;
 
     // Wait for descriptor to become ready.
-    if (descriptor_ops::poll_read(d, 0, ec) < 0)
-      return 0;
+    if (descriptor_ops::poll_read(d, 0, err) < 0)
+      break;
   }
+
+  descriptor_ops::assign_sys_error(ec, err);
+  return 0;
 }
 
 bool non_blocking_read_at(int d, uint64_t offset, buf* bufs, std::size_t count,
@@ -637,29 +784,32 @@ bool non_blocking_read_at(int d, uint64_t offset, buf* bufs, std::size_t count,
   {
     // Read some data.
     signed_size_type bytes = ::preadv(d, bufs, static_cast<int>(count), offset);
-    get_last_error(ec, bytes < 0);
+    int err = descriptor_ops::get_last_sys_error(bytes < 0);
 
     // Check for EOF.
     if (bytes == 0)
     {
-      ec = asio::error::eof;
+      descriptor_ops::assign_eof(ec);
       return true;
     }
 
     // Check if operation succeeded.
     if (bytes > 0)
     {
+      asio::error::clear(ec);
       bytes_transferred = bytes;
       return true;
     }
 
     // Retry operation if interrupted by signal.
-    if (ec == asio::error::interrupted)
+    if (err == asio::error::interrupted)
       continue;
 
+    descriptor_ops::assign_sys_error(ec, err);
+
     // Check if we need to run the operation again.
-    if (ec == asio::error::would_block
-        || ec == asio::error::try_again)
+    if (err == asio::error::would_block
+        || err == asio::error::try_again)
       return false;
 
     // Operation failed.
@@ -675,29 +825,32 @@ bool non_blocking_read_at1(int d, uint64_t offset, void* data, std::size_t size,
   {
     // Read some data.
     signed_size_type bytes = ::pread(d, data, size, offset);
-    get_last_error(ec, bytes < 0);
+    int err = descriptor_ops::get_last_sys_error(bytes < 0);
 
     // Check for EOF.
     if (bytes == 0)
     {
-      ec = asio::error::eof;
+      descriptor_ops::assign_eof(ec);
       return true;
     }
 
     // Check if operation succeeded.
     if (bytes > 0)
     {
+      asio::error::clear(ec);
       bytes_transferred = bytes;
       return true;
     }
 
     // Retry operation if interrupted by signal.
-    if (ec == asio::error::interrupted)
+    if (err == asio::error::interrupted)
       continue;
 
+    descriptor_ops::assign_sys_error(ec, err);
+
     // Check if we need to run the operation again.
-    if (ec == asio::error::would_block
-        || ec == asio::error::try_again)
+    if (err == asio::error::would_block
+        || err == asio::error::try_again)
       return false;
 
     // Operation failed.
@@ -724,27 +877,34 @@ std::size_t sync_write_at(int d, state_type state, uint64_t offset,
   }
 
   // Write some data.
+  int err = 0;
   for (;;)
   {
     // Try to complete the operation without blocking.
     signed_size_type bytes = ::pwritev(d,
         bufs, static_cast<int>(count), offset);
-    get_last_error(ec, bytes < 0);
+    err = descriptor_ops::get_last_sys_error(bytes < 0);
 
     // Check if operation succeeded.
     if (bytes > 0)
+    {
+      asio::error::clear(ec);
       return bytes;
+    }
 
     // Operation failed.
     if ((state & user_set_non_blocking)
-        || (ec != asio::error::would_block
-          && ec != asio::error::try_again))
-      return 0;
+        || (err != asio::error::would_block
+          && err != asio::error::try_again))
+      break;
 
     // Wait for descriptor to become ready.
-    if (descriptor_ops::poll_write(d, 0, ec) < 0)
-      return 0;
+    if (descriptor_ops::poll_write(d, 0, err) < 0)
+      break;
   }
+
+  descriptor_ops::assign_sys_error(ec, err);
+  return 0;
 }
 
 std::size_t sync_write_at1(int d, state_type state, uint64_t offset,
@@ -764,26 +924,33 @@ std::size_t sync_write_at1(int d, state_type state, uint64_t offset,
   }
 
   // Write some data.
+  int err = 0;
   for (;;)
   {
     // Try to complete the operation without blocking.
     signed_size_type bytes = ::pwrite(d, data, size, offset);
-    get_last_error(ec, bytes < 0);
+    err = descriptor_ops::get_last_sys_error(bytes < 0);
 
     // Check if operation succeeded.
     if (bytes > 0)
+    {
+      asio::error::clear(ec);
       return bytes;
+    }
 
     // Operation failed.
     if ((state & user_set_non_blocking)
-        || (ec != asio::error::would_block
-          && ec != asio::error::try_again))
-      return 0;
+        || (err != asio::error::would_block
+          && err != asio::error::try_again))
+      break;
 
     // Wait for descriptor to become ready.
-    if (descriptor_ops::poll_write(d, 0, ec) < 0)
-      return 0;
+    if (descriptor_ops::poll_write(d, 0, err) < 0)
+      break;
   }
+
+  descriptor_ops::assign_sys_error(ec, err);
+  return 0;
 }
 
 bool non_blocking_write_at(int d, uint64_t offset,
@@ -795,22 +962,25 @@ bool non_blocking_write_at(int d, uint64_t offset,
     // Write some data.
     signed_size_type bytes = ::pwritev(d,
         bufs, static_cast<int>(count), offset);
-    get_last_error(ec, bytes < 0);
+    int err = descriptor_ops::get_last_sys_error(bytes < 0);
 
     // Check if operation succeeded.
     if (bytes >= 0)
     {
+      asio::error::clear(ec);
       bytes_transferred = bytes;
       return true;
     }
 
     // Retry operation if interrupted by signal.
-    if (ec == asio::error::interrupted)
+    if (err == asio::error::interrupted)
       continue;
 
+    descriptor_ops::assign_sys_error(ec, err);
+
     // Check if we need to run the operation again.
-    if (ec == asio::error::would_block
-        || ec == asio::error::try_again)
+    if (err == asio::error::would_block
+        || err == asio::error::try_again)
       return false;
 
     // Operation failed.
@@ -827,22 +997,25 @@ bool non_blocking_write_at1(int d, uint64_t offset,
   {
     // Write some data.
     signed_size_type bytes = ::pwrite(d, data, size, offset);
-    get_last_error(ec, bytes < 0);
+    int err = descriptor_ops::get_last_sys_error(bytes < 0);
 
     // Check if operation succeeded.
     if (bytes >= 0)
     {
+      asio::error::clear(ec);
       bytes_transferred = bytes;
       return true;
     }
 
     // Retry operation if interrupted by signal.
-    if (ec == asio::error::interrupted)
+    if (err == asio::error::interrupted)
       continue;
 
+    descriptor_ops::assign_sys_error(ec, err);
+
     // Check if we need to run the operation again.
-    if (ec == asio::error::would_block
-        || ec == asio::error::try_again)
+    if (err == asio::error::would_block
+        || err == asio::error::try_again)
       return false;
 
     // Operation failed.
@@ -918,77 +1091,15 @@ int fcntl(int d, int cmd, long arg, asio::error_code& ec)
   return result;
 }
 
-int poll_read(int d, state_type state, asio::error_code& ec)
-{
-  if (d == -1)
-  {
-    ec = asio::error::bad_descriptor;
-    return -1;
-  }
-
-  pollfd fds;
-  fds.fd = d;
-  fds.events = POLLIN;
-  fds.revents = 0;
-  int timeout = (state & user_set_non_blocking) ? 0 : -1;
-  int result = ::poll(&fds, 1, timeout);
-  get_last_error(ec, result < 0);
-  if (result == 0)
-    if (state & user_set_non_blocking)
-      ec = asio::error::would_block;
-  return result;
-}
-
-int poll_write(int d, state_type state, asio::error_code& ec)
-{
-  if (d == -1)
-  {
-    ec = asio::error::bad_descriptor;
-    return -1;
-  }
-
-  pollfd fds;
-  fds.fd = d;
-  fds.events = POLLOUT;
-  fds.revents = 0;
-  int timeout = (state & user_set_non_blocking) ? 0 : -1;
-  int result = ::poll(&fds, 1, timeout);
-  get_last_error(ec, result < 0);
-  if (result == 0)
-    if (state & user_set_non_blocking)
-      ec = asio::error::would_block;
-  return result;
-}
-
-int poll_error(int d, state_type state, asio::error_code& ec)
-{
-  if (d == -1)
-  {
-    ec = asio::error::bad_descriptor;
-    return -1;
-  }
-
-  pollfd fds;
-  fds.fd = d;
-  fds.events = POLLPRI | POLLERR | POLLHUP;
-  fds.revents = 0;
-  int timeout = (state & user_set_non_blocking) ? 0 : -1;
-  int result = ::poll(&fds, 1, timeout);
-  get_last_error(ec, result < 0);
-  if (result == 0)
-    if (state & user_set_non_blocking)
-      ec = asio::error::would_block;
-  return result;
-}
-
 } // namespace descriptor_ops
 } // namespace detail
+ASIO_INLINE_NAMESPACE_END
 } // namespace asio
 
 #include "asio/detail/pop_options.hpp"
 
 #endif // !defined(ASIO_WINDOWS)
        //   && !defined(ASIO_WINDOWS_RUNTIME)
-       //   && !defined(__CYGWIN__)
+       //   && !defined(ASIO_CYGWIN_W32_SOCKETS)
 
 #endif // ASIO_DETAIL_IMPL_DESCRIPTOR_OPS_IPP

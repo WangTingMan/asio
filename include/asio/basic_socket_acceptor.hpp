@@ -2,7 +2,7 @@
 // basic_socket_acceptor.hpp
 // ~~~~~~~~~~~~~~~~~~~~~~~~~
 //
-// Copyright (c) 2003-2025 Christopher M. Kohlhoff (chris at kohlhoff dot com)
+// Copyright (c) 2003-2026 Christopher M. Kohlhoff (chris at kohlhoff dot com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -41,6 +41,7 @@
 #include "asio/detail/push_options.hpp"
 
 namespace asio {
+ASIO_INLINE_NAMESPACE_BEGIN
 
 #if !defined(ASIO_BASIC_SOCKET_ACCEPTOR_FWD_DECL)
 #define ASIO_BASIC_SOCKET_ACCEPTOR_FWD_DECL
@@ -791,9 +792,9 @@ public:
    *
    * @throws asio::system_error Thrown on failure.
    *
-   * @sa SettableSocketOption @n
-   * asio::socket_base::reuse_address
-   * asio::socket_base::enable_connection_aborted
+   * @sa
+   * @li asio::socket_base::reuse_address
+   * @li asio::socket_base::enable_connection_aborted
    *
    * @par Example
    * Setting the SOL_SOCKET/SO_REUSEADDR option:
@@ -820,9 +821,9 @@ public:
    *
    * @param ec Set to indicate what error occurred, if any.
    *
-   * @sa SettableSocketOption @n
-   * asio::socket_base::reuse_address
-   * asio::socket_base::enable_connection_aborted
+   * @sa
+   * @li asio::socket_base::reuse_address
+   * @li asio::socket_base::enable_connection_aborted
    *
    * @par Example
    * Setting the SOL_SOCKET/SO_REUSEADDR option:
@@ -855,8 +856,8 @@ public:
    *
    * @throws asio::system_error Thrown on failure.
    *
-   * @sa GettableSocketOption @n
-   * asio::socket_base::reuse_address
+   * @sa
+   * @li asio::socket_base::reuse_address
    *
    * @par Example
    * Getting the value of the SOL_SOCKET/SO_REUSEADDR option:
@@ -885,8 +886,8 @@ public:
    *
    * @param ec Set to indicate what error occurred, if any.
    *
-   * @sa GettableSocketOption @n
-   * asio::socket_base::reuse_address
+   * @sa
+   * @li asio::socket_base::reuse_address
    *
    * @par Example
    * Getting the value of the SOL_SOCKET/SO_REUSEADDR option:
@@ -918,18 +919,6 @@ public:
    * @param command The IO control command to be performed on the acceptor.
    *
    * @throws asio::system_error Thrown on failure.
-   *
-   * @sa IoControlCommand @n
-   * asio::socket_base::non_blocking_io
-   *
-   * @par Example
-   * Getting the number of bytes ready to read:
-   * @code
-   * asio::ip::tcp::acceptor acceptor(my_context);
-   * ...
-   * asio::ip::tcp::acceptor::non_blocking_io command(true);
-   * socket.io_control(command);
-   * @endcode
    */
   template <typename IoControlCommand>
   void io_control(IoControlCommand& command)
@@ -946,23 +935,6 @@ public:
    * @param command The IO control command to be performed on the acceptor.
    *
    * @param ec Set to indicate what error occurred, if any.
-   *
-   * @sa IoControlCommand @n
-   * asio::socket_base::non_blocking_io
-   *
-   * @par Example
-   * Getting the number of bytes ready to read:
-   * @code
-   * asio::ip::tcp::acceptor acceptor(my_context);
-   * ...
-   * asio::ip::tcp::acceptor::non_blocking_io command(true);
-   * asio::error_code ec;
-   * socket.io_control(command, ec);
-   * if (ec)
-   * {
-   *   // An error occurred.
-   * }
-   * @endcode
    */
   template <typename IoControlCommand>
   ASIO_SYNC_OP_VOID io_control(IoControlCommand& command,
@@ -1256,7 +1228,8 @@ public:
       async_initiate<WaitToken, void (asio::error_code)>(
         declval<initiate_async_wait>(), token, w))
   {
-    return async_initiate<WaitToken, void (asio::error_code)>(
+    ASIO_INVOKE_INLINE return async_initiate<WaitToken,
+      void (asio::error_code)>(
         initiate_async_wait(this), token, w);
   }
 
@@ -1394,7 +1367,8 @@ public:
         declval<initiate_async_accept>(), token,
         &peer, static_cast<endpoint_type*>(0)))
   {
-    return async_initiate<AcceptToken, void (asio::error_code)>(
+    ASIO_INVOKE_INLINE return async_initiate<AcceptToken,
+      void (asio::error_code)>(
         initiate_async_accept(this), token,
         &peer, static_cast<endpoint_type*>(0));
   }
@@ -1521,7 +1495,8 @@ public:
       async_initiate<AcceptToken, void (asio::error_code)>(
         declval<initiate_async_accept>(), token, &peer, &peer_endpoint))
   {
-    return async_initiate<AcceptToken, void (asio::error_code)>(
+    ASIO_INVOKE_INLINE return async_initiate<AcceptToken,
+      void (asio::error_code)>(
         initiate_async_accept(this), token, &peer, &peer_endpoint);
   }
 #endif // !defined(ASIO_NO_EXTENSIONS)
@@ -1667,7 +1642,7 @@ public:
             static_cast<typename Protocol::socket::template
               rebind_executor<executor_type>::other*>(0)))
   {
-    return async_initiate<MoveAcceptToken,
+    ASIO_INVOKE_INLINE return async_initiate<MoveAcceptToken,
       void (asio::error_code, typename Protocol::socket::template
         rebind_executor<executor_type>::other)>(
           initiate_async_move_accept(this), token,
@@ -1924,7 +1899,7 @@ public:
               static_cast<typename Protocol::socket::template
                 rebind_executor<Executor1>::other*>(0)))
   {
-    return async_initiate<MoveAcceptToken,
+    ASIO_INVOKE_INLINE return async_initiate<MoveAcceptToken,
       void (asio::error_code,
         typename Protocol::socket::template rebind_executor<
           Executor1>::other)>(
@@ -2017,7 +1992,7 @@ public:
               static_cast<typename Protocol::socket::template rebind_executor<
                 typename ExecutionContext::executor_type>::other*>(0)))
   {
-    return async_initiate<MoveAcceptToken,
+    ASIO_INVOKE_INLINE return async_initiate<MoveAcceptToken,
       void (asio::error_code,
         typename Protocol::socket::template rebind_executor<
           typename ExecutionContext::executor_type>::other)>(
@@ -2184,7 +2159,7 @@ public:
             static_cast<typename Protocol::socket::template
               rebind_executor<executor_type>::other*>(0)))
   {
-    return async_initiate<MoveAcceptToken,
+    ASIO_INVOKE_INLINE return async_initiate<MoveAcceptToken,
       void (asio::error_code, typename Protocol::socket::template
         rebind_executor<executor_type>::other)>(
           initiate_async_move_accept(this), token,
@@ -2472,7 +2447,7 @@ public:
           static_cast<typename Protocol::socket::template
             rebind_executor<Executor1>::other*>(0)))
   {
-    return async_initiate<MoveAcceptToken,
+    ASIO_INVOKE_INLINE return async_initiate<MoveAcceptToken,
       void (asio::error_code,
         typename Protocol::socket::template rebind_executor<
           Executor1>::other)>(
@@ -2570,7 +2545,7 @@ public:
               static_cast<typename Protocol::socket::template rebind_executor<
                 typename ExecutionContext::executor_type>::other*>(0)))
   {
-    return async_initiate<MoveAcceptToken,
+    ASIO_INVOKE_INLINE return async_initiate<MoveAcceptToken,
       void (asio::error_code,
         typename Protocol::socket::template rebind_executor<
           typename ExecutionContext::executor_type>::other)>(
@@ -2609,7 +2584,7 @@ private:
       ASIO_WAIT_HANDLER_CHECK(WaitHandler, handler) type_check;
 
       detail::non_const_lvalue<WaitHandler> handler2(handler);
-      self_->impl_.get_service().async_wait(
+      ASIO_INVOKE_INLINE self_->impl_.get_service().async_wait(
           self_->impl_.get_implementation(), w,
           handler2.value, self_->impl_.get_executor());
     }
@@ -2643,7 +2618,7 @@ private:
       ASIO_ACCEPT_HANDLER_CHECK(AcceptHandler, handler) type_check;
 
       detail::non_const_lvalue<AcceptHandler> handler2(handler);
-      self_->impl_.get_service().async_accept(
+      ASIO_INVOKE_INLINE self_->impl_.get_service().async_accept(
           self_->impl_.get_implementation(), *peer, peer_endpoint,
           handler2.value, self_->impl_.get_executor());
     }
@@ -2677,7 +2652,7 @@ private:
           MoveAcceptHandler, handler, Socket) type_check;
 
       detail::non_const_lvalue<MoveAcceptHandler> handler2(handler);
-      self_->impl_.get_service().async_move_accept(
+      ASIO_INVOKE_INLINE self_->impl_.get_service().async_move_accept(
           self_->impl_.get_implementation(), peer_ex, peer_endpoint,
           handler2.value, self_->impl_.get_executor());
     }
@@ -2701,6 +2676,7 @@ private:
 #endif
 };
 
+ASIO_INLINE_NAMESPACE_END
 } // namespace asio
 
 #include "asio/detail/pop_options.hpp"

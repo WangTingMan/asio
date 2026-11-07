@@ -2,7 +2,7 @@
 // detail/socket_ops.hpp
 // ~~~~~~~~~~~~~~~~~~~~~
 //
-// Copyright (c) 2003-2025 Christopher M. Kohlhoff (chris at kohlhoff dot com)
+// Copyright (c) 2003-2026 Christopher M. Kohlhoff (chris at kohlhoff dot com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -24,6 +24,7 @@
 #include "asio/detail/push_options.hpp"
 
 namespace asio {
+ASIO_INLINE_NAMESPACE_BEGIN
 namespace detail {
 namespace socket_ops {
 
@@ -128,11 +129,11 @@ ASIO_DECL size_t available(socket_type s, asio::error_code& ec);
 ASIO_DECL int listen(socket_type s,
     int backlog, asio::error_code& ec);
 
-#if defined(ASIO_WINDOWS) || defined(__CYGWIN__)
+#if defined(ASIO_WINDOWS) || defined(ASIO_CYGWIN_W32_SOCKETS)
 typedef WSABUF buf;
-#else // defined(ASIO_WINDOWS) || defined(__CYGWIN__)
+#else // defined(ASIO_WINDOWS) || defined(ASIO_CYGWIN_W32_SOCKETS)
 typedef iovec buf;
-#endif // defined(ASIO_WINDOWS) || defined(__CYGWIN__)
+#endif // defined(ASIO_WINDOWS) || defined(ASIO_CYGWIN_W32_SOCKETS)
 
 ASIO_DECL void init_buf(buf& b, void* data, size_t size);
 
@@ -202,6 +203,8 @@ ASIO_DECL bool non_blocking_recvfrom1(socket_type s, void* data,
 
 #endif // defined(ASIO_HAS_IOCP)
 
+ASIO_DECL int recv_out_flags(int msg_flags, int in_flags);
+
 ASIO_DECL signed_size_type recvmsg(socket_type s, buf* bufs,
     size_t count, int in_flags, int& out_flags,
     asio::error_code& ec);
@@ -223,6 +226,29 @@ ASIO_DECL bool non_blocking_recvmsg(socket_type s,
     asio::error_code& ec, size_t& bytes_transferred);
 
 #endif // defined(ASIO_HAS_IOCP)
+
+#if defined(ASIO_HAS_RECVMMSG_SENDMMSG)
+
+ASIO_DECL signed_size_type recvmmsg(socket_type s, mmsghdr* bufs,
+    size_t count, int flags, asio::error_code& ec);
+
+#endif // defined(ASIO_HAS_RECVMMSG_SENDMMSG)
+
+#if !defined(ASIO_WINDOWS_RUNTIME)
+
+ASIO_DECL size_t sync_recvmmsg(socket_type s, state_type state,
+    mmsghdr* bufs, size_t count, int flags, bool want_flags,
+    asio::error_code& ec);
+
+#if !defined(ASIO_HAS_IOCP)
+
+ASIO_DECL bool non_blocking_recvmmsg(socket_type s, mmsghdr* bufs,
+    size_t count, int flags, bool want_flags, asio::error_code& ec,
+    size_t& messages_transferred);
+
+#endif // !defined(ASIO_HAS_IOCP)
+
+#endif // !defined(ASIO_WINDOWS_RUNTIME)
 
 ASIO_DECL signed_size_type send(socket_type s, const buf* bufs,
     size_t count, int flags, asio::error_code& ec);
@@ -282,6 +308,28 @@ ASIO_DECL bool non_blocking_sendto1(socket_type s, const void* data,
     asio::error_code& ec, size_t& bytes_transferred);
 
 #endif // !defined(ASIO_HAS_IOCP)
+
+#if defined(ASIO_HAS_RECVMMSG_SENDMMSG)
+
+ASIO_DECL signed_size_type sendmmsg(socket_type s, mmsghdr* bufs,
+    size_t count, int flags, asio::error_code& ec);
+
+#endif // defined(ASIO_HAS_RECVMMSG_SENDMMSG)
+
+#if !defined(ASIO_WINDOWS_RUNTIME)
+
+ASIO_DECL size_t sync_sendmmsg(socket_type s, state_type state,
+    mmsghdr* bufs, size_t count, int flags, asio::error_code& ec);
+
+#if !defined(ASIO_HAS_IOCP)
+
+ASIO_DECL bool non_blocking_sendmmsg(socket_type s, mmsghdr* bufs,
+    size_t count, int flags, asio::error_code& ec,
+    size_t& messages_transferred);
+
+#endif // !defined(ASIO_HAS_IOCP)
+
+#endif // !defined(ASIO_WINDOWS_RUNTIME)
 
 ASIO_DECL socket_type socket(int af, int type, int protocol,
     asio::error_code& ec);
@@ -368,6 +416,7 @@ ASIO_DECL u_short_type host_to_network_short(u_short_type value);
 
 } // namespace socket_ops
 } // namespace detail
+ASIO_INLINE_NAMESPACE_END
 } // namespace asio
 
 #include "asio/detail/pop_options.hpp"

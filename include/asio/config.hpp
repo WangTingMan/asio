@@ -2,7 +2,7 @@
 // config.hpp
 // ~~~~~~~~~~
 //
-// Copyright (c) 2003-2025 Christopher M. Kohlhoff (chris at kohlhoff dot com)
+// Copyright (c) 2003-2026 Christopher M. Kohlhoff (chris at kohlhoff dot com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -25,6 +25,7 @@
 #include "asio/detail/push_options.hpp"
 
 namespace asio {
+ASIO_INLINE_NAMESPACE_BEGIN
 
 /// Base class for configuration implementations.
 class config_service :
@@ -52,6 +53,9 @@ public:
 
 /// Provides access to the configuration values associated with an execution
 /// context.
+/**
+ * @sa @ref overview_configuration "Runtime configuration and concurrency hints"
+ */
 class config
 {
 public:
@@ -75,6 +79,36 @@ public:
   template <typename T>
   constraint_t<is_integral<T>::value, T>
   get(const char* section, const char* key_name, T default_value) const;
+
+  /// Retrieve a string configuration value.
+  /**
+   * The returned pointer may be:
+   * @li a pointer that is valid for the lifetime of the execution context, or
+   * @li a pointer to the supplied @c value buffer, or
+   * @li @c default_value, if no value is configured.
+   *
+   * @throws std::out_of_range Thrown if the configured value is too long for
+   * the supplied buffer.
+   */
+  ASIO_DECL const char* get(const char* section, const char* key_name,
+      const char* default_value, char* value, std::size_t value_len) const;
+
+  /// Retrieve a string configuration value into a character array.
+  /**
+   * The returned pointer may be:
+   * @li a pointer that is valid for the lifetime of the execution context, or
+   * @li a pointer to the supplied @c value buffer, or
+   * @li @c default_value, if no value is configured.
+   *
+   * @throws std::out_of_range Thrown if the configured value is too long for
+   * the supplied buffer.
+   */
+  template <std::size_t N>
+  const char* get(const char* section, const char* key_name,
+      const char* default_value, char (&value)[N]) const
+  {
+    return get(section, key_name, default_value, value, N);
+  }
 
 private:
   config_service& service_;
@@ -181,6 +215,7 @@ private:
   std::string prefix_;
 };
 
+ASIO_INLINE_NAMESPACE_END
 } // namespace asio
 
 #include "asio/detail/pop_options.hpp"

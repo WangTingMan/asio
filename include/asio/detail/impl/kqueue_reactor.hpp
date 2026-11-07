@@ -2,7 +2,7 @@
 // detail/impl/kqueue_reactor.hpp
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //
-// Copyright (c) 2003-2025 Christopher M. Kohlhoff (chris at kohlhoff dot com)
+// Copyright (c) 2003-2026 Christopher M. Kohlhoff (chris at kohlhoff dot com)
 // Copyright (c) 2005 Stefan Arentz (stefan at soze dot com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
@@ -25,12 +25,40 @@
 #include "asio/detail/push_options.hpp"
 
 namespace asio {
+ASIO_INLINE_NAMESPACE_BEGIN
 namespace detail {
 
 inline void kqueue_reactor::post_immediate_completion(
     operation* op, bool is_continuation) const
 {
   scheduler_.post_immediate_completion(op, is_continuation);
+}
+
+template <int OpType, reactor_op::perform_func_type Perform>
+inline bool kqueue_reactor::start_op(socket_type descriptor,
+    kqueue_reactor::per_descriptor_data& descriptor_data, reactor_op* op)
+{
+  if (ASIO_UNLIKELY(!descriptor_data))
+    return start_bad_descriptor_op(op);
+
+  mutex::scoped_lock descriptor_lock(descriptor_data->mutex_);
+
+  const bool speculative = Perform != nullptr
+    && descriptor_data->op_queue_[OpType].empty()
+    && (OpType != read_op
+      || descriptor_data->op_queue_[except_op].empty());
+
+  if (speculative)
+  {
+    if (Perform(op))
+    {
+      descriptor_lock.unlock();
+      return true;
+    }
+  }
+
+  return start_unready_op(OpType, descriptor,
+      descriptor_data, descriptor_lock, op, speculative);
 }
 
 template <typename TimeTraits, typename Allocator>
@@ -108,6 +136,7 @@ void kqueue_reactor::move_timer(timer_queue<TimeTraits, Allocator>& queue,
 }
 
 } // namespace detail
+ASIO_INLINE_NAMESPACE_END
 } // namespace asio
 
 #include "asio/detail/pop_options.hpp"

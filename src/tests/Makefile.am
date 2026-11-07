@@ -71,6 +71,7 @@ check_PROGRAMS = \
 	unit/detached \
 	unit/dispatch \
 	unit/disposition \
+	unit/eager \
 	unit/error \
 	unit/execution/any_executor \
 	unit/execution/blocking \
@@ -83,10 +84,13 @@ check_PROGRAMS = \
 	unit/execution/outstanding_work \
 	unit/execution/prefer_only \
 	unit/execution/relationship \
+	unit/execution/staging_executor \
 	unit/execution_context \
 	unit/executor \
 	unit/executor_work_guard \
 	unit/file_base \
+	unit/fwd_first \
+	unit/fwd_last \
 	unit/generic/basic_endpoint \
 	unit/generic/datagram_protocol \
 	unit/generic/raw_protocol \
@@ -110,6 +114,7 @@ check_PROGRAMS = \
 	unit/ip/basic_resolver_entry \
 	unit/ip/basic_resolver_iterator \
 	unit/ip/basic_resolver_query \
+	unit/ip/basic_resolver_results \
 	unit/ip/host_name \
 	unit/ip/icmp \
 	unit/ip/multicast \
@@ -121,6 +126,7 @@ check_PROGRAMS = \
 	unit/ip/unicast \
 	unit/ip/v6_only \
 	unit/is_read_buffered \
+	unit/is_shallow_mutable_sequence \
 	unit/is_write_buffered \
 	unit/local/basic_endpoint \
 	unit/local/connect_pair \
@@ -128,6 +134,7 @@ check_PROGRAMS = \
 	unit/local/seq_packet_protocol \
 	unit/local/stream_protocol \
 	unit/packaged_task \
+	unit/piping \
 	unit/placeholders \
 	unit/posix/basic_descriptor \
 	unit/posix/basic_stream_descriptor \
@@ -162,6 +169,7 @@ check_PROGRAMS = \
 	unit/thread \
 	unit/thread_pool \
 	unit/time_traits \
+	unit/trampoline \
 	unit/ts/buffer \
 	unit/ts/executor \
 	unit/ts/internet \
@@ -201,6 +209,11 @@ endif
 
 if HAVE_CXX11
 check_PROGRAMS += \
+	unit/basic_channel \
+	unit/basic_concurrent_channel \
+	unit/channel \
+	unit/channel_traits \
+	unit/concurrent_channel \
 	unit/experimental/basic_channel \
 	unit/experimental/basic_concurrent_channel \
 	unit/experimental/channel \
@@ -229,7 +242,7 @@ check_PROGRAMS += \
 endif
 endif
 
-if HAVE_BOOST_COROUTINE
+if HAVE_FIBER
 check_PROGRAMS += \
 	unit/spawn
 endif
@@ -303,6 +316,7 @@ TESTS = \
 	unit/detached \
 	unit/dispatch \
 	unit/disposition \
+	unit/eager \
 	unit/error \
 	unit/execution/any_executor \
 	unit/execution/blocking \
@@ -315,10 +329,13 @@ TESTS = \
 	unit/execution/outstanding_work \
 	unit/execution/prefer_only \
 	unit/execution/relationship \
+	unit/execution/staging_executor \
 	unit/execution_context \
 	unit/executor \
 	unit/executor_work_guard \
 	unit/file_base \
+	unit/fwd_first \
+	unit/fwd_last \
 	unit/high_resolution_timer \
 	unit/immediate \
 	unit/inline_executor \
@@ -337,6 +354,7 @@ TESTS = \
 	unit/ip/basic_resolver_entry \
 	unit/ip/basic_resolver_iterator \
 	unit/ip/basic_resolver_query \
+	unit/ip/basic_resolver_results \
 	unit/ip/host_name \
 	unit/ip/icmp \
 	unit/ip/multicast \
@@ -348,6 +366,7 @@ TESTS = \
 	unit/ip/unicast \
 	unit/ip/v6_only \
 	unit/is_read_buffered \
+	unit/is_shallow_mutable_sequence \
 	unit/is_write_buffered \
 	unit/local/basic_endpoint \
 	unit/local/connect_pair \
@@ -355,6 +374,7 @@ TESTS = \
 	unit/local/seq_packet_protocol \
 	unit/local/stream_protocol \
 	unit/packaged_task \
+	unit/piping \
 	unit/placeholders \
 	unit/posix/basic_descriptor\
 	unit/posix/basic_stream_descriptor\
@@ -389,6 +409,7 @@ TESTS = \
 	unit/thread \
 	unit/thread_pool \
 	unit/time_traits \
+	unit/trampoline \
 	unit/ts/buffer \
 	unit/ts/executor \
 	unit/ts/internet \
@@ -416,6 +437,11 @@ TESTS = \
 
 if HAVE_CXX11
 TESTS += \
+	unit/basic_channel \
+	unit/basic_concurrent_channel \
+	unit/channel \
+	unit/channel_traits \
+	unit/concurrent_channel \
 	unit/experimental/basic_channel \
 	unit/experimental/basic_concurrent_channel \
 	unit/experimental/channel \
@@ -424,7 +450,7 @@ TESTS += \
 	unit/experimental/parallel_group
 endif
 
-if HAVE_BOOST_COROUTINE
+if HAVE_FIBER
 TESTS += \
 	unit/spawn
 endif
@@ -534,6 +560,7 @@ unit_deferred_SOURCES = unit/deferred.cpp
 unit_detached_SOURCES = unit/detached.cpp
 unit_dispatch_SOURCES = unit/dispatch.cpp
 unit_disposition_SOURCES = unit/disposition.cpp
+unit_eager_SOURCES = unit/eager.cpp
 unit_error_SOURCES = unit/error.cpp
 unit_execution_any_executor_SOURCES = unit/execution/any_executor.cpp
 unit_execution_blocking_SOURCES = unit/execution/blocking.cpp
@@ -546,10 +573,13 @@ unit_execution_mapping_SOURCES = unit/execution/mapping.cpp
 unit_execution_outstanding_work_SOURCES = unit/execution/outstanding_work.cpp
 unit_execution_prefer_only_SOURCES = unit/execution/prefer_only.cpp
 unit_execution_relationship_SOURCES = unit/execution/relationship.cpp
+unit_execution_staging_executor_SOURCES = unit/execution/staging_executor.cpp
 unit_execution_context_SOURCES = unit/execution_context.cpp
 unit_executor_SOURCES = unit/executor.cpp
 unit_executor_work_guard_SOURCES = unit/executor_work_guard.cpp
 unit_file_base_SOURCES = unit/file_base.cpp
+unit_fwd_first_SOURCES = unit/fwd_first.cpp
+unit_fwd_last_SOURCES = unit/fwd_last.cpp
 unit_generic_basic_endpoint_SOURCES = unit/generic/basic_endpoint.cpp
 unit_generic_datagram_protocol_SOURCES = unit/generic/datagram_protocol.cpp
 unit_generic_raw_protocol_SOURCES = unit/generic/raw_protocol.cpp
@@ -573,6 +603,7 @@ unit_ip_basic_resolver_SOURCES = unit/ip/basic_resolver.cpp
 unit_ip_basic_resolver_entry_SOURCES = unit/ip/basic_resolver_entry.cpp
 unit_ip_basic_resolver_iterator_SOURCES = unit/ip/basic_resolver_iterator.cpp
 unit_ip_basic_resolver_query_SOURCES = unit/ip/basic_resolver_query.cpp
+unit_ip_basic_resolver_results_SOURCES = unit/ip/basic_resolver_results.cpp
 unit_ip_host_name_SOURCES = unit/ip/host_name.cpp
 unit_ip_icmp_SOURCES = unit/ip/icmp.cpp
 unit_ip_multicast_SOURCES = unit/ip/multicast.cpp
@@ -584,6 +615,7 @@ unit_ip_udp_SOURCES = unit/ip/udp.cpp
 unit_ip_unicast_SOURCES = unit/ip/unicast.cpp
 unit_ip_v6_only_SOURCES = unit/ip/v6_only.cpp
 unit_is_read_buffered_SOURCES = unit/is_read_buffered.cpp
+unit_is_shallow_mutable_sequence_SOURCES = unit/is_shallow_mutable_sequence.cpp
 unit_is_write_buffered_SOURCES = unit/is_write_buffered.cpp
 unit_local_basic_endpoint_SOURCES = unit/local/basic_endpoint.cpp
 unit_local_connect_pair_SOURCES = unit/local/connect_pair.cpp
@@ -591,6 +623,7 @@ unit_local_datagram_protocol_SOURCES = unit/local/datagram_protocol.cpp
 unit_local_seq_packet_protocol_SOURCES = unit/local/seq_packet_protocol.cpp
 unit_local_stream_protocol_SOURCES = unit/local/stream_protocol.cpp
 unit_packaged_task_SOURCES = unit/packaged_task.cpp
+unit_piping_SOURCES = unit/piping.cpp
 unit_placeholders_SOURCES = unit/placeholders.cpp
 unit_posix_basic_descriptor_SOURCES = unit/posix/basic_descriptor.cpp
 unit_posix_basic_stream_descriptor_SOURCES = unit/posix/basic_stream_descriptor.cpp
@@ -625,6 +658,7 @@ unit_this_coro_SOURCES = unit/this_coro.cpp
 unit_thread_SOURCES = unit/thread.cpp
 unit_thread_pool_SOURCES = unit/thread_pool.cpp
 unit_time_traits_SOURCES = unit/time_traits.cpp
+unit_trampoline_SOURCES = unit/trampoline.cpp
 unit_ts_buffer_SOURCES = unit/ts/buffer.cpp
 unit_ts_executor_SOURCES = unit/ts/executor.cpp
 unit_ts_internet_SOURCES = unit/ts/internet.cpp
@@ -651,6 +685,11 @@ unit_write_SOURCES = unit/write.cpp
 unit_write_at_SOURCES = unit/write_at.cpp
 
 if HAVE_CXX11
+unit_basic_channel_SOURCES = unit/basic_channel.cpp
+unit_basic_concurrent_channel_SOURCES = unit/basic_concurrent_channel.cpp
+unit_channel_SOURCES = unit/channel.cpp
+unit_channel_traits_SOURCES = unit/channel_traits.cpp
+unit_concurrent_channel_SOURCES = unit/concurrent_channel.cpp
 unit_experimental_basic_channel_SOURCES = unit/experimental/basic_channel.cpp
 unit_experimental_basic_concurrent_channel_SOURCES = unit/experimental/basic_concurrent_channel.cpp
 unit_experimental_channel_SOURCES = unit/experimental/channel.cpp
@@ -659,9 +698,13 @@ unit_experimental_concurrent_channel_SOURCES = unit/experimental/concurrent_chan
 unit_experimental_parallel_group_SOURCES = unit/experimental/parallel_group.cpp
 endif
 
-if HAVE_BOOST_COROUTINE
+if HAVE_FIBER
 unit_spawn_SOURCES = unit/spawn.cpp
-unit_spawn_LDADD = -lboost_context
+if HAVE_BOOST_CONTEXT
+unit_spawn_LDADD = $(LDADD) -lboost_context
+else
+unit_spawn_LDADD = $(LDADD)
+endif
 endif
 
 if HAVE_CXX20

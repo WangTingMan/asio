@@ -126,6 +126,7 @@ INPUT                  = ./../../include/asio.hpp \
                          ./../../include/asio/execution \
                          ./../../include/asio/experimental \
                          ./model_dox.txt \
+                         ./overview_dox.txt \
                          ./noncopyable_dox.txt \
                          ./requirements_dox.txt \
                          ./std_exception_dox.txt
@@ -318,6 +319,8 @@ PREDEFINED             = GENERATING_DOCUMENTATION \
                          ASIO_CONSTEXPR=constexpr \
                          ASIO_NOEXCEPT=noexcept \
                          ASIO_NODISCARD= \
+                         ASIO_ALWAYS_INLINE= \
+                         ASIO_NEVER_INLINE= \
                          ASIO_INLINE_VARIABLE= \
                          ASIO_COMPLETION_SIGNATURE=typename \
                          ASIO_COMPLETION_HANDLER_FOR(s)=typename \
@@ -353,7 +356,10 @@ PREDEFINED             = GENERATING_DOCUMENTATION \
                          ASIO_AUTO_RETURN_TYPE_PREFIX(t)=auto \
                          "ASIO_AUTO_RETURN_TYPE_PREFIX2(t0,t1)=auto" \
                          "ASIO_AUTO_RETURN_TYPE_PREFIX3(t0,t1,t2)=auto" \
-                         ASIO_AUTO_RETURN_TYPE_SUFFIX(t)=
+                         ASIO_AUTO_RETURN_TYPE_SUFFIX(t)= \
+                         ASIO_INLINE_NAMESPACE_BEGIN= \
+                         ASIO_INLINE_NAMESPACE_END= \
+                         ASIO_EMPTY_BASES=
 EXPAND_AS_DEFINED      =
 SKIP_FUNCTION_MACROS   = YES
 #---------------------------------------------------------------------------

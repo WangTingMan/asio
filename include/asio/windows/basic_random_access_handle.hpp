@@ -2,7 +2,7 @@
 // windows/basic_random_access_handle.hpp
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //
-// Copyright (c) 2003-2025 Christopher M. Kohlhoff (chris at kohlhoff dot com)
+// Copyright (c) 2003-2026 Christopher M. Kohlhoff (chris at kohlhoff dot com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -24,7 +24,17 @@
 #include "asio/detail/push_options.hpp"
 
 namespace asio {
+ASIO_INLINE_NAMESPACE_BEGIN
 namespace windows {
+
+#if !defined(ASIO_WINDOWS_BASIC_RANDOM_ACCESS_HANDLE_FWD_DECL)
+#define ASIO_WINDOWS_BASIC_RANDOM_ACCESS_HANDLE_FWD_DECL
+
+// Forward declaration with defaulted arguments.
+template <typename Executor = any_io_executor>
+class basic_random_access_handle;
+
+#endif // !defined(ASIO_WINDOWS_BASIC_RANDOM_ACCESS_HANDLE_FWD_DECL)
 
 /// Provides random-access handle functionality.
 /**
@@ -34,8 +44,10 @@ namespace windows {
  * @par Thread Safety
  * @e Distinct @e objects: Safe.@n
  * @e Shared @e objects: Unsafe.
+ *
+ * @sa @ref overview_windows_random_access_handle "Random-access HANDLEs"
  */
-template <typename Executor = any_io_executor>
+template <typename Executor>
 class basic_random_access_handle
   : public basic_overlapped_handle<Executor>
 {
@@ -346,7 +358,7 @@ public:
         void (asio::error_code, std::size_t)>(
           declval<initiate_async_write_some_at>(), token, offset, buffers))
   {
-    return async_initiate<WriteToken,
+    ASIO_INVOKE_INLINE return async_initiate<WriteToken,
       void (asio::error_code, std::size_t)>(
         initiate_async_write_some_at(this), token, offset, buffers);
   }
@@ -483,7 +495,7 @@ public:
         void (asio::error_code, std::size_t)>(
           declval<initiate_async_read_some_at>(), token, offset, buffers))
   {
-    return async_initiate<ReadToken,
+    ASIO_INVOKE_INLINE return async_initiate<ReadToken,
       void (asio::error_code, std::size_t)>(
         initiate_async_read_some_at(this), token, offset, buffers);
   }
@@ -513,7 +525,7 @@ private:
       ASIO_WRITE_HANDLER_CHECK(WriteHandler, handler) type_check;
 
       detail::non_const_lvalue<WriteHandler> handler2(handler);
-      self_->impl_.get_service().async_write_some_at(
+      ASIO_INVOKE_INLINE self_->impl_.get_service().async_write_some_at(
           self_->impl_.get_implementation(), offset, buffers,
           handler2.value, self_->impl_.get_executor());
     }
@@ -546,7 +558,7 @@ private:
       ASIO_READ_HANDLER_CHECK(ReadHandler, handler) type_check;
 
       detail::non_const_lvalue<ReadHandler> handler2(handler);
-      self_->impl_.get_service().async_read_some_at(
+      ASIO_INVOKE_INLINE self_->impl_.get_service().async_read_some_at(
           self_->impl_.get_implementation(), offset, buffers,
           handler2.value, self_->impl_.get_executor());
     }
@@ -557,6 +569,7 @@ private:
 };
 
 } // namespace windows
+ASIO_INLINE_NAMESPACE_END
 } // namespace asio
 
 #include "asio/detail/pop_options.hpp"

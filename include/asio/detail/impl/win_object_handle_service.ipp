@@ -2,7 +2,7 @@
 // detail/impl/win_object_handle_service.ipp
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //
-// Copyright (c) 2003-2025 Christopher M. Kohlhoff (chris at kohlhoff dot com)
+// Copyright (c) 2003-2026 Christopher M. Kohlhoff (chris at kohlhoff dot com)
 // Copyright (c) 2011 Boris Schaeling (boris@highscore.de)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
@@ -21,10 +21,12 @@
 #if defined(ASIO_HAS_WINDOWS_OBJECT_HANDLE)
 
 #include "asio/detail/win_object_handle_service.hpp"
+#include "asio/error.hpp"
 
 #include "asio/detail/push_options.hpp"
 
 namespace asio {
+ASIO_INLINE_NAMESPACE_BEGIN
 namespace detail {
 
 win_object_handle_service::win_object_handle_service(execution_context& context)
@@ -218,7 +220,7 @@ asio::error_code win_object_handle_service::assign(
   }
 
   impl.handle_ = handle;
-  ec = asio::error_code();
+  asio::error::clear(ec);
   return ec;
 }
 
@@ -255,7 +257,7 @@ asio::error_code win_object_handle_service::close(
     if (::CloseHandle(impl.handle_))
     {
       impl.handle_ = INVALID_HANDLE_VALUE;
-      ec = asio::error_code();
+      asio::error::clear(ec);
     }
     else
     {
@@ -268,7 +270,7 @@ asio::error_code win_object_handle_service::close(
   }
   else
   {
-    ec = asio::error_code();
+    asio::error::clear(ec);
   }
 
   ASIO_ERROR_LOCATION(ec);
@@ -305,7 +307,7 @@ asio::error_code win_object_handle_service::cancel(
     if (wait_handle != INVALID_HANDLE_VALUE)
       ::UnregisterWaitEx(wait_handle, INVALID_HANDLE_VALUE);
 
-    ec = asio::error_code();
+    asio::error::clear(ec);
 
     scheduler_.post_deferred_completions(completed_ops);
   }
@@ -335,7 +337,7 @@ void win_object_handle_service::wait(
   case WAIT_OBJECT_0:
   case WAIT_ABANDONED:
   default:
-    ec = asio::error_code();
+    asio::error::clear(ec);
     break;
   }
 }
@@ -413,7 +415,7 @@ void win_object_handle_service::wait_callback(PVOID param, BOOLEAN)
   {
     op_queue<operation> completed_ops;
 
-    op->ec_ = asio::error_code();
+    asio::error::clear(op->ec_);
     impl->op_queue_.pop();
     completed_ops.push(op);
 
@@ -443,6 +445,7 @@ void win_object_handle_service::wait_callback(PVOID param, BOOLEAN)
 }
 
 } // namespace detail
+ASIO_INLINE_NAMESPACE_END
 } // namespace asio
 
 #include "asio/detail/pop_options.hpp"

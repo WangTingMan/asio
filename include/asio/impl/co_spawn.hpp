@@ -2,7 +2,7 @@
 // impl/co_spawn.hpp
 // ~~~~~~~~~~~~~~~~~
 //
-// Copyright (c) 2003-2025 Christopher M. Kohlhoff (chris at kohlhoff dot com)
+// Copyright (c) 2003-2026 Christopher M. Kohlhoff (chris at kohlhoff dot com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -29,6 +29,7 @@
 #include "asio/detail/push_options.hpp"
 
 namespace asio {
+ASIO_INLINE_NAMESPACE_BEGIN
 namespace detail {
 
 template <typename Executor, typename = void>
@@ -46,7 +47,7 @@ public:
   {
   }
 
-  executor_type get_executor() const noexcept
+  const executor_type& get_executor() const noexcept
   {
     return executor_;
   }
@@ -93,11 +94,7 @@ struct co_spawn_state
 template <typename Handler, typename Executor, typename Function>
 struct co_spawn_state<Handler, Executor, Function,
     enable_if_t<
-      is_same<
-        typename associated_executor<Handler,
-          Executor>::asio_associated_executor_is_unspecialised,
-        void
-      >::value
+      !has_associated_executor<Handler, Executor>::value
     >>
 {
   template <typename H, typename F>
@@ -271,11 +268,7 @@ private:
 template <typename Handler, typename Executor>
 class co_spawn_cancellation_handler<Handler, Executor,
     enable_if_t<
-      is_same<
-        typename associated_executor<Handler,
-          Executor>::asio_associated_executor_is_unspecialised,
-        void
-      >::value
+      !has_associated_executor<Handler, Executor>::value
     >>
 {
 public:
@@ -309,7 +302,7 @@ public:
   {
   }
 
-  executor_type get_executor() const noexcept
+  const executor_type& get_executor() const noexcept
   {
     return ex_;
   }
@@ -448,6 +441,7 @@ co_spawn(ExecutionContext& ctx, F&& f, CompletionToken&& token,
       std::forward<CompletionToken>(token));
 }
 
+ASIO_INLINE_NAMESPACE_END
 } // namespace asio
 
 #include "asio/detail/pop_options.hpp"

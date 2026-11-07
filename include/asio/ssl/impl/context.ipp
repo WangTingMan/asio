@@ -3,7 +3,7 @@
 // ~~~~~~~~~~~~~~~~~~~~
 //
 // Copyright (c) 2005 Voipster / Indrek dot Juhani at voipster dot com
-// Copyright (c) 2005-2025 Christopher M. Kohlhoff (chris at kohlhoff dot com)
+// Copyright (c) 2005-2026 Christopher M. Kohlhoff (chris at kohlhoff dot com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -27,6 +27,7 @@
 #include "asio/detail/push_options.hpp"
 
 namespace asio {
+ASIO_INLINE_NAMESPACE_BEGIN
 namespace ssl {
 
 struct context::bio_cleanup
@@ -270,7 +271,8 @@ context::context(context::method m)
 
     // TLS v1.3.
 #if ((OPENSSL_VERSION_NUMBER >= 0x10101000L) \
-      && !defined(LIBRESSL_VERSION_NUMBER)) \
+      && (!defined(LIBRESSL_VERSION_NUMBER) || \
+        LIBRESSL_VERSION_NUMBER >= 0x3020000fL)) \
     || defined(ASIO_USE_WOLFSSL)
   case context::tlsv13:
     handle_ = ::SSL_CTX_new(::TLS_method());
@@ -463,7 +465,7 @@ ASIO_SYNC_OP_VOID context::clear_options(
 
   ::SSL_CTX_clear_options(handle_, o);
 
-  ec = asio::error_code();
+  asio::error::clear(ec);
 #else // (OPENSSL_VERSION_NUMBER >= 0x009080DFL)
       //   && (OPENSSL_VERSION_NUMBER != 0x00909000L)
   (void)o;
@@ -496,7 +498,7 @@ ASIO_SYNC_OP_VOID context::set_options(
 
   ::SSL_CTX_set_options(handle_, o);
 
-  ec = asio::error_code();
+  asio::error::clear(ec);
   ASIO_SYNC_OP_VOID_RETURN(ec);
 }
 
@@ -512,7 +514,7 @@ ASIO_SYNC_OP_VOID context::set_verify_mode(
 {
   ::SSL_CTX_set_verify(handle_, v, ::SSL_CTX_get_verify_callback(handle_));
 
-  ec = asio::error_code();
+  asio::error::clear(ec);
   ASIO_SYNC_OP_VOID_RETURN(ec);
 }
 
@@ -528,7 +530,7 @@ ASIO_SYNC_OP_VOID context::set_verify_depth(
 {
   ::SSL_CTX_set_verify_depth(handle_, depth);
 
-  ec = asio::error_code();
+  asio::error::clear(ec);
   ASIO_SYNC_OP_VOID_RETURN(ec);
 }
 
@@ -550,7 +552,7 @@ ASIO_SYNC_OP_VOID context::load_verify_file(
     ASIO_SYNC_OP_VOID_RETURN(ec);
   }
 
-  ec = asio::error_code();
+  asio::error::clear(ec);
   ASIO_SYNC_OP_VOID_RETURN(ec);
 }
 
@@ -594,7 +596,7 @@ ASIO_SYNC_OP_VOID context::add_certificate_authority(
     }
   }
 
-  ec = asio::error_code();
+  asio::error::clear(ec);
   ASIO_SYNC_OP_VOID_RETURN(ec);
 }
 
@@ -616,7 +618,7 @@ ASIO_SYNC_OP_VOID context::set_default_verify_paths(
     ASIO_SYNC_OP_VOID_RETURN(ec);
   }
 
-  ec = asio::error_code();
+  asio::error::clear(ec);
   ASIO_SYNC_OP_VOID_RETURN(ec);
 }
 
@@ -638,7 +640,7 @@ ASIO_SYNC_OP_VOID context::add_verify_path(
     ASIO_SYNC_OP_VOID_RETURN(ec);
   }
 
-  ec = asio::error_code();
+  asio::error::clear(ec);
   ASIO_SYNC_OP_VOID_RETURN(ec);
 }
 
@@ -662,7 +664,7 @@ ASIO_SYNC_OP_VOID context::use_certificate(
           static_cast<int>(certificate.size()),
           static_cast<const unsigned char*>(certificate.data())) == 1)
     {
-      ec = asio::error_code();
+      asio::error::clear(ec);
       ASIO_SYNC_OP_VOID_RETURN(ec);
     }
   }
@@ -676,7 +678,7 @@ ASIO_SYNC_OP_VOID context::use_certificate(
       {
         if (::SSL_CTX_use_certificate(handle_, cert.p) == 1)
         {
-          ec = asio::error_code();
+          asio::error::clear(ec);
           ASIO_SYNC_OP_VOID_RETURN(ec);
         }
       }
@@ -728,7 +730,7 @@ ASIO_SYNC_OP_VOID context::use_certificate_file(
     ASIO_SYNC_OP_VOID_RETURN(ec);
   }
 
-  ec = asio::error_code();
+  asio::error::clear(ec);
   ASIO_SYNC_OP_VOID_RETURN(ec);
 }
 
@@ -803,7 +805,7 @@ ASIO_SYNC_OP_VOID context::use_certificate_chain(
         && (ERR_GET_REASON(result) == PEM_R_NO_START_LINE))
     {
       ::ERR_clear_error();
-      ec = asio::error_code();
+      asio::error::clear(ec);
       ASIO_SYNC_OP_VOID_RETURN(ec);
     }
   }
@@ -830,7 +832,7 @@ ASIO_SYNC_OP_VOID context::use_certificate_chain_file(
     ASIO_SYNC_OP_VOID_RETURN(ec);
   }
 
-  ec = asio::error_code();
+  asio::error::clear(ec);
   ASIO_SYNC_OP_VOID_RETURN(ec);
 }
 
@@ -884,7 +886,7 @@ ASIO_SYNC_OP_VOID context::use_private_key(
     {
       if (::SSL_CTX_use_PrivateKey(handle_, evp_private_key.p) == 1)
       {
-        ec = asio::error_code();
+        asio::error::clear(ec);
         ASIO_SYNC_OP_VOID_RETURN(ec);
       }
     }
@@ -960,7 +962,7 @@ ASIO_SYNC_OP_VOID context::use_rsa_private_key(
 
       if (::SSL_CTX_use_PrivateKey(handle_, evp_private_key.p) == 1)
       {
-        ec = asio::error_code();
+        asio::error::clear(ec);
         ASIO_SYNC_OP_VOID_RETURN(ec);
       }
     }
@@ -987,7 +989,7 @@ ASIO_SYNC_OP_VOID context::use_rsa_private_key(
     {
       if (::SSL_CTX_use_RSAPrivateKey(handle_, rsa_private_key.p) == 1)
       {
-        ec = asio::error_code();
+        asio::error::clear(ec);
         ASIO_SYNC_OP_VOID_RETURN(ec);
       }
     }
@@ -1026,7 +1028,7 @@ ASIO_SYNC_OP_VOID context::use_private_key_file(
     ASIO_SYNC_OP_VOID_RETURN(ec);
   }
 
-  ec = asio::error_code();
+  asio::error::clear(ec);
   ASIO_SYNC_OP_VOID_RETURN(ec);
 }
 
@@ -1080,7 +1082,7 @@ ASIO_SYNC_OP_VOID context::use_rsa_private_key_file(
 
       if (::SSL_CTX_use_PrivateKey(handle_, evp_private_key.p) == 1)
       {
-        ec = asio::error_code();
+        asio::error::clear(ec);
         ASIO_SYNC_OP_VOID_RETURN(ec);
       }
     }
@@ -1114,7 +1116,7 @@ ASIO_SYNC_OP_VOID context::use_rsa_private_key_file(
     ASIO_SYNC_OP_VOID_RETURN(ec);
   }
 
-  ec = asio::error_code();
+  asio::error::clear(ec);
   ASIO_SYNC_OP_VOID_RETURN(ec);
 #endif // (OPENSSL_VERSION_NUMBER >= 0x30000000L)
 }
@@ -1174,7 +1176,7 @@ ASIO_SYNC_OP_VOID context::do_use_tmp_dh(
   {
     if (::SSL_CTX_set0_tmp_dh_pkey(handle_, p) == 1)
     {
-      ec = asio::error_code();
+      asio::error::clear(ec);
       ASIO_SYNC_OP_VOID_RETURN(ec);
     }
     else
@@ -1186,7 +1188,7 @@ ASIO_SYNC_OP_VOID context::do_use_tmp_dh(
   {
     if (::SSL_CTX_set_tmp_dh(handle_, dh.p) == 1)
     {
-      ec = asio::error_code();
+      asio::error::clear(ec);
       ASIO_SYNC_OP_VOID_RETURN(ec);
     }
   }
@@ -1211,7 +1213,7 @@ ASIO_SYNC_OP_VOID context::do_set_verify_callback(
       ::SSL_CTX_get_verify_mode(handle_),
       &context::verify_callback_function);
 
-  ec = asio::error_code();
+  asio::error::clear(ec);
   ASIO_SYNC_OP_VOID_RETURN(ec);
 }
 
@@ -1261,7 +1263,7 @@ ASIO_SYNC_OP_VOID context::do_set_password_callback(
 
   SSL_CTX_set_default_passwd_cb(handle_, &context::password_callback_function);
 
-  ec = asio::error_code();
+  asio::error::clear(ec);
   ASIO_SYNC_OP_VOID_RETURN(ec);
 }
 
@@ -1315,6 +1317,7 @@ asio::error_code context::translate_error(long error)
 }
 
 } // namespace ssl
+ASIO_INLINE_NAMESPACE_END
 } // namespace asio
 
 #include "asio/detail/pop_options.hpp"

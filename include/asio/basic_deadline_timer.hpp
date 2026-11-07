@@ -2,7 +2,7 @@
 // basic_deadline_timer.hpp
 // ~~~~~~~~~~~~~~~~~~~~~~~~
 //
-// Copyright (c) 2003-2025 Christopher M. Kohlhoff (chris at kohlhoff dot com)
+// Copyright (c) 2003-2026 Christopher M. Kohlhoff (chris at kohlhoff dot com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -36,6 +36,7 @@
 #include "asio/detail/push_options.hpp"
 
 namespace asio {
+ASIO_INLINE_NAMESPACE_BEGIN
 
 /// (Deprecated: Use basic_waitable_timer.) Provides waitable timer
 /// functionality.
@@ -657,7 +658,8 @@ public:
       async_initiate<WaitToken, void (asio::error_code)>(
         declval<initiate_async_wait>(), token))
   {
-    return async_initiate<WaitToken, void (asio::error_code)>(
+    ASIO_INVOKE_INLINE return async_initiate<WaitToken,
+      void (asio::error_code)>(
         initiate_async_wait(this), token);
   }
 
@@ -690,7 +692,7 @@ private:
       ASIO_WAIT_HANDLER_CHECK(WaitHandler, handler) type_check;
 
       detail::non_const_lvalue<WaitHandler> handler2(handler);
-      self_->impl_.get_service().async_wait(
+      ASIO_INVOKE_INLINE self_->impl_.get_service().async_wait(
           self_->impl_.get_implementation(),
           handler2.value, self_->impl_.get_executor());
     }
@@ -703,6 +705,7 @@ private:
     detail::deadline_timer_service<TimeTraits>, Executor> impl_;
 };
 
+ASIO_INLINE_NAMESPACE_END
 } // namespace asio
 
 #include "asio/detail/pop_options.hpp"

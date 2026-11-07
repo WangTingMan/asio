@@ -2,7 +2,7 @@
 // detail/win_iocp_socket_accept_op.hpp
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //
-// Copyright (c) 2003-2025 Christopher M. Kohlhoff (chris at kohlhoff dot com)
+// Copyright (c) 2003-2026 Christopher M. Kohlhoff (chris at kohlhoff dot com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -32,6 +32,7 @@
 #include "asio/detail/push_options.hpp"
 
 namespace asio {
+ASIO_INLINE_NAMESPACE_BEGIN
 namespace detail {
 
 template <typename Socket, typename Protocol,
@@ -74,22 +75,20 @@ public:
     return sizeof(sockaddr_storage_type) + 16;
   }
 
-  void enable_cancellation(long* cancel_requested, operation* proxy_op)
+  void enable_cancellation(LONG* cancel_requested, operation* proxy_op)
   {
     cancel_requested_ = cancel_requested;
     proxy_op_ = proxy_op;
   }
 
   static void do_complete(void* owner, operation* base,
-      const asio::error_code& result_ec,
-      std::size_t /*bytes_transferred*/)
+      int error_value, std::size_t /*bytes_transferred*/)
   {
-    asio::error_code ec(result_ec);
-
     // Take ownership of the operation object.
     ASIO_ASSUME(base != 0);
     win_iocp_socket_accept_op* o(static_cast<win_iocp_socket_accept_op*>(base));
     ptr p = { asio::detail::addressof(o->handler_), o, o };
+    asio::error_code ec(o->make_error_code(error_value));
 
     if (owner)
     {
@@ -173,7 +172,7 @@ private:
   unsigned char output_buffer_[(sizeof(sockaddr_storage_type) + 16) * 2];
   bool enable_connection_aborted_;
   operation* proxy_op_;
-  long* cancel_requested_;
+  LONG* cancel_requested_;
   Handler handler_;
   handler_work<Handler, IoExecutor> work_;
 };
@@ -219,23 +218,21 @@ public:
     return sizeof(sockaddr_storage_type) + 16;
   }
 
-  void enable_cancellation(long* cancel_requested, operation* proxy_op)
+  void enable_cancellation(LONG* cancel_requested, operation* proxy_op)
   {
     cancel_requested_ = cancel_requested;
     proxy_op_ = proxy_op;
   }
 
   static void do_complete(void* owner, operation* base,
-      const asio::error_code& result_ec,
-      std::size_t /*bytes_transferred*/)
+      int error_value, std::size_t /*bytes_transferred*/)
   {
-    asio::error_code ec(result_ec);
-
     // Take ownership of the operation object.
     ASIO_ASSUME(base != 0);
     win_iocp_socket_move_accept_op* o(
         static_cast<win_iocp_socket_move_accept_op*>(base));
     ptr p = { asio::detail::addressof(o->handler_), o, o };
+    asio::error_code ec(o->make_error_code(error_value));
 
     if (owner)
     {
@@ -323,13 +320,14 @@ private:
   typename Protocol::endpoint* peer_endpoint_;
   unsigned char output_buffer_[(sizeof(sockaddr_storage_type) + 16) * 2];
   bool enable_connection_aborted_;
-  long* cancel_requested_;
+  LONG* cancel_requested_;
   operation* proxy_op_;
   Handler handler_;
   handler_work<Handler, IoExecutor> work_;
 };
 
 } // namespace detail
+ASIO_INLINE_NAMESPACE_END
 } // namespace asio
 
 #include "asio/detail/pop_options.hpp"

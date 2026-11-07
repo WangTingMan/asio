@@ -2,7 +2,7 @@
 // detail/kqueue_reactor.hpp
 // ~~~~~~~~~~~~~~~~~~~~~~~~~
 //
-// Copyright (c) 2003-2025 Christopher M. Kohlhoff (chris at kohlhoff dot com)
+// Copyright (c) 2003-2026 Christopher M. Kohlhoff (chris at kohlhoff dot com)
 // Copyright (c) 2005 Stefan Arentz (stefan at soze dot com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
@@ -24,6 +24,7 @@
 #include <sys/types.h>
 #include <sys/event.h>
 #include <sys/time.h>
+#include "asio/detail/atomic_count.hpp"
 #include "asio/detail/conditionally_enabled_mutex.hpp"
 #include "asio/detail/limits.hpp"
 #include "asio/detail/object_pool.hpp"
@@ -31,6 +32,7 @@
 #include "asio/detail/reactor_op.hpp"
 #include "asio/detail/scheduler_task.hpp"
 #include "asio/detail/select_interrupter.hpp"
+#include "asio/detail/slim_mutex.hpp"
 #include "asio/detail/socket_types.hpp"
 #include "asio/detail/timer_queue_base.hpp"
 #include "asio/detail/timer_queue_set.hpp"
@@ -46,6 +48,7 @@
 #include "asio/detail/push_options.hpp"
 
 namespace asio {
+ASIO_INLINE_NAMESPACE_BEGIN
 namespace detail {
 
 class scheduler;
@@ -56,7 +59,7 @@ class kqueue_reactor
 {
 private:
   // The mutex type used by this reactor.
-  typedef conditionally_enabled_mutex mutex;
+  typedef conditionally_enabled_mutex<slim_mutex> mutex;
 
 public:
   enum op_types { read_op = 0, write_op = 1,
@@ -108,6 +111,13 @@ public:
       int op_type, socket_type descriptor,
       per_descriptor_data& descriptor_data, reactor_op* op);
 
+  // Give a descriptor a name, used to lookup per-descriptor configuration.
+  void set_descriptor_name(per_descriptor_data&,
+      const char* /*name*/, asio::error_code& ec)
+  {
+    asio::error::clear(ec);
+  }
+
   // Move descriptor registration from one descriptor_data object to another.
   ASIO_DECL void move_descriptor(socket_type descriptor,
       per_descriptor_data& target_descriptor_data,
@@ -120,24 +130,24 @@ public:
   ASIO_DECL static void call_post_immediate_completion(
       operation* op, bool is_continuation, const void* self);
 
-  // Start a new operation. The reactor operation will be performed when the
-  // given descriptor is flagged as ready, or an error has occurred.
-  ASIO_DECL void start_op(int op_type, socket_type descriptor,
-      per_descriptor_data& descriptor_data, reactor_op* op,
-      bool is_continuation, bool allow_speculative,
-      void (*on_immediate)(operation*, bool, const void*),
-      const void* immediate_arg);
+  // Start a new operation with the operation type and perform function
+  // specified at compile time. Returns true if the operation is ready for
+  // immediate completion. Otherwise, the reactor operation will be performed
+  // when the given descriptor is flagged as ready, or an error has occurred.
+  template <int OpType, reactor_op::perform_func_type Perform>
+  inline bool start_op(socket_type descriptor,
+      per_descriptor_data& descriptor_data, reactor_op* op);
 
-  // Start a new operation. The reactor operation will be performed when the
-  // given descriptor is flagged as ready, or an error has occurred.
-  void start_op(int op_type, socket_type descriptor,
-      per_descriptor_data& descriptor_data, reactor_op* op,
-      bool is_continuation, bool allow_speculative)
-  {
-    start_op(op_type, descriptor, descriptor_data,
-        op, is_continuation, allow_speculative,
-        &kqueue_reactor::call_post_immediate_completion, this);
-  }
+  // Set the result of an operation that was started on an unopen descriptor.
+  ASIO_DECL ASIO_NEVER_INLINE static bool start_bad_descriptor_op(
+      reactor_op* op);
+
+  // Start a new operation that was not completed speculatively. The reactor
+  // operation will be performed when the given descriptor is flagged as ready,
+  // or an error has occurred.
+  ASIO_DECL ASIO_NEVER_INLINE bool start_unready_op(int op_type,
+      socket_type descriptor, per_descriptor_data& descriptor_data,
+      mutex::scoped_lock& descriptor_lock, reactor_op* op, bool speculative);
 
   // Cancel all operations associated with the given descriptor. The
   // handlers associated with the descriptor will be invoked with the
@@ -267,6 +277,7 @@ private:
 };
 
 } // namespace detail
+ASIO_INLINE_NAMESPACE_END
 } // namespace asio
 
 #include "asio/detail/pop_options.hpp"

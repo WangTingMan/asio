@@ -2,7 +2,7 @@
 // impl/error_code.ipp
 // ~~~~~~~~~~~~~~~~~~~
 //
-// Copyright (c) 2003-2025 Christopher M. Kohlhoff (chris at kohlhoff dot com)
+// Copyright (c) 2003-2026 Christopher M. Kohlhoff (chris at kohlhoff dot com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -16,7 +16,7 @@
 #endif // defined(_MSC_VER) && (_MSC_VER >= 1200)
 
 #include "asio/detail/config.hpp"
-#if defined(ASIO_WINDOWS) || defined(__CYGWIN__)
+#if defined(ASIO_WINDOWS) || defined(ASIO_CYGWIN_W32_SOCKETS)
 # include <winerror.h>
 #elif defined(ASIO_WINDOWS_RUNTIME)
 # include <windows.h>
@@ -32,6 +32,7 @@
 #include "asio/detail/push_options.hpp"
 
 namespace asio {
+ASIO_INLINE_NAMESPACE_BEGIN
 namespace error {
 namespace detail {
 
@@ -64,40 +65,18 @@ public:
         wmsg.resize(wmsg.size() + wmsg.size() / 2);
         continue;
       }
-      if (wlength && wmsg[wlength - 1] == '\n')
-        --wlength;
-      if (wlength && wmsg[wlength - 1] == '\r')
-        --wlength;
-      if (wlength)
-      {
-        std::string msg(wlength * 2, char());
-        int length = ::WideCharToMultiByte(CP_ACP, 0,
-            wmsg.c_str(), static_cast<int>(wlength),
-            &msg[0], static_cast<int>(wlength * 2), 0, 0);
-        if (length <= 0)
-          return "asio.system error";
-        msg.resize(static_cast<std::size_t>(length));
-        return msg;
-      }
-      else
-        return "asio.system error";
+      return narrow_message(wmsg.c_str(), wlength);
     }
-#elif defined(ASIO_WINDOWS) || defined(__CYGWIN__)
-    char* msg = 0;
-    DWORD length = ::FormatMessageA(FORMAT_MESSAGE_ALLOCATE_BUFFER
+#elif defined(ASIO_WINDOWS) || defined(ASIO_CYGWIN_W32_SOCKETS)
+    wchar_t* wmsg = 0;
+    DWORD wlength = ::FormatMessageW(FORMAT_MESSAGE_ALLOCATE_BUFFER
         | FORMAT_MESSAGE_FROM_SYSTEM
         | FORMAT_MESSAGE_IGNORE_INSERTS, 0, value,
-        MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (char*)&msg, 0, 0);
-    detail::local_free_on_block_exit local_free_obj(msg);
-    if (length && msg[length - 1] == '\n')
-      msg[--length] = '\0';
-    if (length && msg[length - 1] == '\r')
-      msg[--length] = '\0';
-    if (length)
-      return msg;
-    else
-      return "asio.system error";
-#else // defined(ASIO_WINDOWS_DESKTOP) || defined(__CYGWIN__)
+        MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (wchar_t*)&wmsg, 0, 0);
+    detail::local_free_on_block_exit local_free_obj(wmsg);
+    return narrow_message(wmsg, wlength);
+#else // defined(ASIO_WINDOWS_DESKTOP)
+      //   || defined(ASIO_CYGWIN_W32_SOCKETS)
 #if !defined(__sun)
     if (value == ECANCELED)
       return "Operation aborted.";
@@ -110,7 +89,8 @@ public:
     using namespace std;
     return strerror_result(strerror_r(value, buf, sizeof(buf)), buf);
 #endif
-#endif // defined(ASIO_WINDOWS_DESKTOP) || defined(__CYGWIN__)
+#endif // defined(ASIO_WINDOWS_DESKTOP)
+       //   || defined(ASIO_CYGWIN_W32_SOCKETS)
   }
 
   std::error_condition default_error_condition(int ev) const noexcept
@@ -119,6 +99,42 @@ public:
   }
 
 private:
+#if defined(ASIO_WINDOWS_RUNTIME) || defined(ASIO_WINDOWS) \
+  || defined(ASIO_CYGWIN_W32_SOCKETS)
+  // Helper function to convert a message obtained from FormatMessageW to the
+  // ANSI code page or, if ASIO_USE_UTF8 is defined, to UTF-8.
+  static std::string narrow_message(const wchar_t* wmsg, DWORD wlength)
+  {
+    if (wlength && wmsg[wlength - 1] == L'\n')
+      --wlength;
+    if (wlength && wmsg[wlength - 1] == L'\r')
+      --wlength;
+    if (wlength == 0)
+      return "asio.system error";
+
+#if defined(ASIO_USE_UTF8)
+    const UINT code_page = CP_UTF8;
+#else // defined(ASIO_USE_UTF8)
+    const UINT code_page = CP_ACP;
+#endif // defined(ASIO_USE_UTF8)
+
+    int length = ::WideCharToMultiByte(code_page, 0,
+        wmsg, static_cast<int>(wlength), 0, 0, 0, 0);
+    if (length <= 0)
+      return "asio.system error";
+
+    std::string msg(static_cast<std::size_t>(length), char());
+    length = ::WideCharToMultiByte(code_page, 0,
+        wmsg, static_cast<int>(wlength), &msg[0], length, 0, 0);
+    if (length <= 0)
+      return "asio.system error";
+
+    msg.resize(static_cast<std::size_t>(length));
+    return msg;
+  }
+#endif // defined(ASIO_WINDOWS_RUNTIME) || defined(ASIO_WINDOWS)
+       //   || defined(ASIO_CYGWIN_W32_SOCKETS)
+
   // Helper function to adapt the result from glibc's variant of strerror_r.
   static const char* strerror_result(int, const char* s) { return s; }
   static const char* strerror_result(const char* s, const char*) { return s; }
@@ -128,10 +144,11 @@ private:
 
 const error_category& system_category()
 {
-  static detail::system_category instance;
+  ASIO_NO_DESTROY static detail::system_category instance;
   return instance;
 }
 
+ASIO_INLINE_NAMESPACE_END
 } // namespace asio
 
 #include "asio/detail/pop_options.hpp"

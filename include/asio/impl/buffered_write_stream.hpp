@@ -2,7 +2,7 @@
 // impl/buffered_write_stream.hpp
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //
-// Copyright (c) 2003-2025 Christopher M. Kohlhoff (chris at kohlhoff dot com)
+// Copyright (c) 2003-2026 Christopher M. Kohlhoff (chris at kohlhoff dot com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -19,10 +19,12 @@
 #include "asio/detail/handler_cont_helpers.hpp"
 #include "asio/detail/handler_type_requirements.hpp"
 #include "asio/detail/non_const_lvalue.hpp"
+#include "asio/error.hpp"
 
 #include "asio/detail/push_options.hpp"
 
 namespace asio {
+ASIO_INLINE_NAMESPACE_BEGIN
 
 template <typename Stream>
 std::size_t buffered_write_stream<Stream>::flush()
@@ -56,17 +58,11 @@ namespace detail
     {
     }
 
-    buffered_flush_handler(const buffered_flush_handler& other)
-      : storage_(other.storage_),
-        handler_(other.handler_)
-    {
-    }
+    buffered_flush_handler(const buffered_flush_handler& other) = default;
+    buffered_flush_handler(buffered_flush_handler&& other) = default;
 
-    buffered_flush_handler(buffered_flush_handler&& other)
-      : storage_(other.storage_),
-        handler_(static_cast<WriteHandler&&>(other.handler_))
-    {
-    }
+    buffered_flush_handler& operator=(const buffered_flush_handler&) = delete;
+    buffered_flush_handler& operator=(buffered_flush_handler&&) = delete;
 
     void operator()(const asio::error_code& ec,
         const std::size_t bytes_written)
@@ -84,7 +80,7 @@ namespace detail
   inline bool asio_handler_is_continuation(
       buffered_flush_handler<WriteHandler>* this_handler)
   {
-    return asio_handler_cont_helpers::is_continuation(
+    return ASIO_VERSIONED_NAME(handler_cont_helpers)::is_continuation(
           this_handler->handler_);
   }
 
@@ -187,7 +183,7 @@ template <typename ConstBufferSequence>
 std::size_t buffered_write_stream<Stream>::write_some(
     const ConstBufferSequence& buffers, asio::error_code& ec)
 {
-  ec = asio::error_code();
+  asio::error::clear(ec);
 
   using asio::buffer_size;
   if (buffer_size(buffers) == 0)
@@ -213,12 +209,8 @@ namespace detail
     {
     }
 
-    buffered_write_some_handler(const buffered_write_some_handler& other)
-      : storage_(other.storage_),
-        buffers_(other.buffers_),
-        handler_(other.handler_)
-    {
-    }
+    buffered_write_some_handler(
+        const buffered_write_some_handler& other) = default;
 
     buffered_write_some_handler(buffered_write_some_handler&& other)
       : storage_(other.storage_),
@@ -226,6 +218,11 @@ namespace detail
         handler_(static_cast<WriteHandler&&>(other.handler_))
     {
     }
+
+    buffered_write_some_handler& operator=(
+        const buffered_write_some_handler&) = delete;
+    buffered_write_some_handler& operator=(
+        buffered_write_some_handler&&) = delete;
 
     void operator()(const asio::error_code& ec, std::size_t)
     {
@@ -260,7 +257,7 @@ namespace detail
       buffered_write_some_handler<
         ConstBufferSequence, WriteHandler>* this_handler)
   {
-    return asio_handler_cont_helpers::is_continuation(
+    return ASIO_VERSIONED_NAME(handler_cont_helpers)::is_continuation(
           this_handler->handler_);
   }
 
@@ -377,6 +374,7 @@ std::size_t buffered_write_stream<Stream>::copy(
       storage_.data() + orig_size, buffers, length);
 }
 
+ASIO_INLINE_NAMESPACE_END
 } // namespace asio
 
 #include "asio/detail/pop_options.hpp"

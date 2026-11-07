@@ -1,5 +1,5 @@
 [/
- / Copyright (c) 2003-2025 Christopher M. Kohlhoff (chris at kohlhoff dot com)
+ / Copyright (c) 2003-2026 Christopher M. Kohlhoff (chris at kohlhoff dot com)
  /
  / Distributed under the Boost Software License, Version 1.0. (See accompanying
  / file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -65,6 +65,17 @@ completion token.
 
 * [@../src/examples/cpp11/deferred/deferred_1.cpp]
 * [@../src/examples/cpp11/deferred/deferred_2.cpp]
+
+
+[heading Eager]
+
+Examples showing how to use the [link asio.reference.eager `eager`] completion
+token.
+
+* [@../src/examples/cpp11/eager/eager_1.cpp]
+* [@../src/examples/cpp11/eager/eager_2.cpp]
+* [@../src/examples/cpp11/eager/eager_3.cpp]
+* [@../src/examples/cpp11/eager/eager_4.cpp]
 
 
 [heading Echo]
@@ -306,16 +317,13 @@ decode structures for transmission over a socket.
 [heading Services]
 
 This example demonstrates how to integrate custom functionality (in this case,
-for logging) into asio's [link asio.reference.io_context io_context], and
-how to use a custom service with [link
-asio.reference.basic_stream_socket basic_stream_socket<>].
+for logging) into asio's [link asio.reference.io_context io_context].
 
 * [@../src/examples/cpp11/services/basic_logger.hpp]
 * [@../src/examples/cpp11/services/daytime_client.cpp]
 * [@../src/examples/cpp11/services/logger.hpp]
 * [@../src/examples/cpp11/services/logger_service.cpp]
 * [@../src/examples/cpp11/services/logger_service.hpp]
-* [@../src/examples/cpp11/services/stream_socket_service.hpp]
 
 
 [heading SOCKS 4]
@@ -532,7 +540,17 @@ Coroutines.
 * [@../src/examples/cpp20/coroutines/echo_server_with_deferred_default.cpp]
 * [@../src/examples/cpp20/coroutines/refactored_echo_server.cpp]
 * [@../src/examples/cpp20/coroutines/chat_server.cpp]
-* [@../src/examples/cpp20/coroutines/timeout.cpp]
+* [@../src/examples/cpp20/coroutines/timeout_cancel_after.cpp]
+* [@../src/examples/cpp20/coroutines/timeout_watchdog.cpp]
+
+
+[heading Eager]
+
+An example showing how to use the [link asio.reference.eager `eager`]
+completion token to keep several operations in flight, so that each result is
+processed while the next is already being fetched.
+
+* [@../src/examples/cpp20/eager/pipeline.cpp]
 
 
 [heading Invocation]

@@ -24,6 +24,7 @@
 #include "asio/detail/push_options.hpp"
 
 namespace asio {
+ASIO_INLINE_NAMESPACE_BEGIN
 
 class any_io_executor;
 
@@ -123,6 +124,9 @@ struct use_coro_t
     /// Specify @c use_coro_t as the default completion token type.
     typedef use_coro_t default_completion_token_type;
 
+    /// The adapted executor type, without the default completion token.
+    typedef InnerExecutor executor_without_default;
+
     /// Construct the adapted executor from the inner executor type.
     template <typename InnerExecutor1>
     executor_with_default(const InnerExecutor1& ex,
@@ -179,6 +183,7 @@ ASIO_INLINE_VARIABLE constexpr use_coro_t<> use_coro(0, 0, 0);
 #endif
 
 } // namespace experimental
+ASIO_INLINE_NAMESPACE_END
 } // namespace asio
 
 #include "asio/detail/pop_options.hpp"

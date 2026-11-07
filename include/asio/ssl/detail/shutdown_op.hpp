@@ -2,7 +2,7 @@
 // ssl/detail/shutdown_op.hpp
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~
 //
-// Copyright (c) 2003-2025 Christopher M. Kohlhoff (chris at kohlhoff dot com)
+// Copyright (c) 2003-2026 Christopher M. Kohlhoff (chris at kohlhoff dot com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -16,12 +16,13 @@
 #endif // defined(_MSC_VER) && (_MSC_VER >= 1200)
 
 #include "asio/detail/config.hpp"
-
+#include "asio/error.hpp"
 #include "asio/ssl/detail/engine.hpp"
 
 #include "asio/detail/push_options.hpp"
 
 namespace asio {
+ASIO_INLINE_NAMESPACE_BEGIN
 namespace ssl {
 namespace detail {
 
@@ -39,6 +40,17 @@ public:
   {
     bytes_transferred = 0;
     return eng.shutdown(ec);
+  }
+
+  void complete_sync(asio::error_code& ec) const
+  {
+    if (ec == asio::error::eof)
+    {
+      // The engine only generates an eof when the shutdown notification has
+      // been received from the peer. This indicates that the shutdown has
+      // completed successfully, and thus need not be returned to the caller.
+      asio::error::clear(ec);
+    }
   }
 
   template <typename Handler>
@@ -62,6 +74,7 @@ public:
 
 } // namespace detail
 } // namespace ssl
+ASIO_INLINE_NAMESPACE_END
 } // namespace asio
 
 #include "asio/detail/pop_options.hpp"

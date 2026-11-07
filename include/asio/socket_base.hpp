@@ -2,7 +2,7 @@
 // socket_base.hpp
 // ~~~~~~~~~~~~~~~
 //
-// Copyright (c) 2003-2025 Christopher M. Kohlhoff (chris at kohlhoff dot com)
+// Copyright (c) 2003-2026 Christopher M. Kohlhoff (chris at kohlhoff dot com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -23,6 +23,7 @@
 #include "asio/detail/push_options.hpp"
 
 namespace asio {
+ASIO_INLINE_NAMESPACE_BEGIN
 
 /// The socket_base class is used as a base for the basic_stream_socket and
 /// basic_datagram_socket class templates so that we have a common place to
@@ -503,6 +504,38 @@ public:
     enable_connection_aborted;
 #endif
 
+  /// I/O control command to name the socket for the reactor.
+  /**
+   * Implements a custom I/O control command that gives the socket a name.
+   * Whether the name is used is backend-dependent. It is currently used by the
+   * spin reactor, to look up per-socket configuration. The name is not
+   * required to be unique.
+   *
+   * @note The string is stored by pointer in the I/O control command object, so
+   * the caller must ensure that it is valid across the call to @c io_control.
+   *
+   * @par Example
+   * @code
+   * asio::ip::udp::socket d(my_context, fd);
+   * ...
+   * asio::socket_base::descriptor_name name("xyzzy");
+   * d.io_control(name);
+   * @endcode
+   *
+   * @par
+   * With a string configuration, specified via asio::config_from_string:
+   * @code
+   * reactor.descriptors.xyzzy.priority=10
+   * reactor.descriptors.xyzzy.interval=4
+   * reactor.descriptors.xyzzy.offset=1
+   * @endcode
+   */
+#if defined(GENERATING_DOCUMENTATION)
+  typedef implementation_defined descriptor_name;
+#else
+  typedef asio::detail::io_control::descriptor_name descriptor_name;
+#endif
+
   /// IO control command to get the amount of data that can be read without
   /// blocking.
   /**
@@ -541,6 +574,7 @@ protected:
   }
 };
 
+ASIO_INLINE_NAMESPACE_END
 } // namespace asio
 
 #include "asio/detail/pop_options.hpp"

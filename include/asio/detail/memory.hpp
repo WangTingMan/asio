@@ -2,7 +2,7 @@
 // detail/memory.hpp
 // ~~~~~~~~~~~~~~~~~
 //
-// Copyright (c) 2003-2025 Christopher M. Kohlhoff (chris at kohlhoff dot com)
+// Copyright (c) 2003-2026 Christopher M. Kohlhoff (chris at kohlhoff dot com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -22,6 +22,7 @@
 #include <new>
 #include "asio/detail/cstdint.hpp"
 #include "asio/detail/throw_exception.hpp"
+#include "asio/detail/type_traits.hpp"
 
 #if !defined(ASIO_HAS_STD_ALIGNED_ALLOC) \
   && defined(ASIO_HAS_BOOST_ALIGN)
@@ -30,6 +31,7 @@
        //   && defined(ASIO_HAS_BOOST_ALIGN)
 
 namespace asio {
+ASIO_INLINE_NAMESPACE_BEGIN
 namespace detail {
 
 using std::allocate_shared;
@@ -56,6 +58,72 @@ inline void* align(std::size_t alignment,
 {
   return std::align(alignment, size, ptr, space);
 }
+
+// Holds an allocator, using the empty base optimisation unless the allocator
+// type is final.
+template <typename Allocator, bool = is_empty<Allocator>::value
+    && !is_final<Allocator>::value>
+class allocator_base : private Allocator
+{
+public:
+  allocator_base()
+    : Allocator()
+  {
+  }
+
+  explicit allocator_base(const Allocator& a)
+    : Allocator(a)
+  {
+  }
+
+  explicit allocator_base(Allocator&& a)
+    : Allocator(static_cast<Allocator&&>(a))
+  {
+  }
+
+  Allocator& allocator_ref() noexcept
+  {
+    return *this;
+  }
+
+  constexpr const Allocator& allocator_ref() const noexcept
+  {
+    return *this;
+  }
+};
+
+template <typename Allocator>
+class allocator_base<Allocator, false>
+{
+public:
+  allocator_base()
+    : allocator_()
+  {
+  }
+
+  explicit allocator_base(const Allocator& a)
+    : allocator_(a)
+  {
+  }
+
+  explicit allocator_base(Allocator&& a)
+    : allocator_(static_cast<Allocator&&>(a))
+  {
+  }
+
+  Allocator& allocator_ref() noexcept
+  {
+    return allocator_;
+  }
+
+  constexpr const Allocator& allocator_ref() const noexcept
+  {
+    return allocator_;
+  }
+
+private:
+  Allocator allocator_;
+};
 
 template <typename T, typename Allocator, typename... Args>
 T* allocate_object(const Allocator& a, Args&&... args)
@@ -149,6 +217,7 @@ inline void aligned_delete(void* ptr)
 #endif // defined(ASIO_MSVC)
 }
 
+ASIO_INLINE_NAMESPACE_END
 } // namespace asio
 
 #endif // ASIO_DETAIL_MEMORY_HPP

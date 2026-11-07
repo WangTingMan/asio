@@ -2,7 +2,7 @@
 // detail/impl/win_iocp_socket_service_base.ipp
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //
-// Copyright (c) 2003-2025 Christopher M. Kohlhoff (chris at kohlhoff dot com)
+// Copyright (c) 2003-2026 Christopher M. Kohlhoff (chris at kohlhoff dot com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -20,10 +20,12 @@
 #if defined(ASIO_HAS_IOCP)
 
 #include "asio/detail/win_iocp_socket_service_base.hpp"
+#include "asio/error.hpp"
 
 #include "asio/detail/push_options.hpp"
 
 namespace asio {
+ASIO_INLINE_NAMESPACE_BEGIN
 namespace detail {
 
 win_iocp_socket_service_base::win_iocp_socket_service_base(
@@ -186,7 +188,7 @@ asio::error_code win_iocp_socket_service_base::close(
   }
   else
   {
-    ec = asio::error_code();
+    asio::error::clear(ec);
   }
 
   impl.socket_ = invalid_socket;
@@ -262,7 +264,7 @@ asio::error_code win_iocp_socket_service_base::cancel(
         // ERROR_NOT_FOUND means that there were no operations to be
         // cancelled. We swallow this error to match the behaviour on other
         // platforms.
-        ec = asio::error_code();
+        asio::error::clear(ec);
       }
       else
       {
@@ -272,14 +274,14 @@ asio::error_code win_iocp_socket_service_base::cancel(
     }
     else
     {
-      ec = asio::error_code();
+      asio::error::clear(ec);
     }
   }
 #if defined(ASIO_ENABLE_CANCELIO)
   else if (impl.safe_cancellation_thread_id_ == 0)
   {
     // No operations have been started, so there's nothing to cancel.
-    ec = asio::error_code();
+    asio::error::clear(ec);
   }
   else if (impl.safe_cancellation_thread_id_ == ::GetCurrentThreadId())
   {
@@ -295,7 +297,7 @@ asio::error_code win_iocp_socket_service_base::cancel(
     }
     else
     {
-      ec = asio::error_code();
+      asio::error::clear(ec);
     }
   }
   else
@@ -351,7 +353,7 @@ asio::error_code win_iocp_socket_service_base::do_open(
   default: impl.state_ = 0; break;
   }
   impl.cancel_token_.reset(static_cast<void*>(0), socket_ops::noop_deleter());
-  ec = asio::error_code();
+  asio::error::clear(ec);
   return ec;
 }
 
@@ -377,7 +379,7 @@ asio::error_code win_iocp_socket_service_base::do_assign(
   default: impl.state_ = 0; break;
   }
   impl.cancel_token_.reset(static_cast<void*>(0), socket_ops::noop_deleter());
-  ec = asio::error_code();
+  asio::error::clear(ec);
   return ec;
 }
 
@@ -479,10 +481,16 @@ int win_iocp_socket_service_base::start_null_buffers_receive_op(
   }
   else
   {
-    int op_type = (flags & socket_base::message_out_of_band)
-      ? select_reactor::except_op : select_reactor::read_op;
-    start_reactor_op(impl, op_type, op);
-    return op_type;
+    if (flags & socket_base::message_out_of_band)
+    {
+      start_reactor_op<select_reactor::except_op>(impl, op);
+      return select_reactor::except_op;
+    }
+    else
+    {
+      start_reactor_op<select_reactor::read_op>(impl, op);
+      return select_reactor::read_op;
+    }
   }
 }
 
@@ -548,7 +556,7 @@ void win_iocp_socket_service_base::start_accept_op(
 void win_iocp_socket_service_base::restart_accept_op(
     socket_type s, socket_holder& new_socket, int family, int type,
     int protocol, void* output_buffer, DWORD address_length,
-    long* cancel_requested, operation* op)
+    LONG* cancel_requested, operation* op)
 {
   new_socket.reset();
   iocp_service_.work_started();
@@ -587,22 +595,19 @@ void win_iocp_socket_service_base::restart_accept_op(
   }
 }
 
-void win_iocp_socket_service_base::start_reactor_op(
+select_reactor* win_iocp_socket_service_base::prepare_reactor_op(
     win_iocp_socket_service_base::base_implementation_type& impl,
-    int op_type, reactor_op* op)
+    reactor_op* op)
 {
   select_reactor& r = get_reactor();
   update_cancellation_thread_id(impl);
 
   if (is_open(impl))
-  {
-    r.start_op(op_type, impl.socket_, impl.reactor_data_, op, false, false);
-    return;
-  }
-  else
-    op->ec_ = asio::error::bad_descriptor;
+    return &r;
 
+  op->ec_ = asio::error::bad_descriptor;
   iocp_service_.post_immediate_completion(op, false);
+  return nullptr;
 }
 
 int win_iocp_socket_service_base::start_connect_op(
@@ -665,9 +670,10 @@ int win_iocp_socket_service_base::start_connect_op(
       if (op->ec_ == asio::error::in_progress
           || op->ec_ == asio::error::would_block)
       {
-        op->ec_ = asio::error_code();
-        r.start_op(select_reactor::connect_op, impl.socket_,
-            impl.reactor_data_, op, false, false);
+        asio::error::clear(op->ec_);
+        if (r.start_op<select_reactor::connect_op, nullptr>(impl.socket_,
+              impl.reactor_data_, op))
+          r.post_immediate_completion(op, false);
         return select_reactor::connect_op;
       }
     }
@@ -812,6 +818,7 @@ void* win_iocp_socket_service_base::interlocked_exchange_pointer(
 }
 
 } // namespace detail
+ASIO_INLINE_NAMESPACE_END
 } // namespace asio
 
 #include "asio/detail/pop_options.hpp"

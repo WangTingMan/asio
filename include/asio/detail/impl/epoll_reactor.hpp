@@ -2,7 +2,7 @@
 // detail/impl/epoll_reactor.hpp
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //
-// Copyright (c) 2003-2025 Christopher M. Kohlhoff (chris at kohlhoff dot com)
+// Copyright (c) 2003-2026 Christopher M. Kohlhoff (chris at kohlhoff dot com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -22,12 +22,45 @@
 #include "asio/detail/push_options.hpp"
 
 namespace asio {
+ASIO_INLINE_NAMESPACE_BEGIN
 namespace detail {
 
 inline void epoll_reactor::post_immediate_completion(
     operation* op, bool is_continuation) const
 {
   scheduler_.post_immediate_completion(op, is_continuation);
+}
+
+template <int OpType, reactor_op::perform_func_type Perform>
+inline bool epoll_reactor::start_op(socket_type descriptor,
+    epoll_reactor::per_descriptor_data& descriptor_data, reactor_op* op)
+{
+  (void)descriptor;
+
+  if (ASIO_UNLIKELY(!descriptor_data))
+    return start_bad_descriptor_op(op);
+
+  descriptor_data->mutex_.lock();
+  mutex::scoped_lock descriptor_lock(descriptor_data->mutex_,
+      mutex::scoped_lock::adopt_lock);
+
+  if (Perform != nullptr
+      && descriptor_data->try_speculative_[OpType]
+      && descriptor_data->op_queue_[OpType].empty()
+      && (OpType != read_op
+        || descriptor_data->op_queue_[except_op].empty()))
+  {
+    if (reactor_op::status status = Perform(op))
+    {
+      if (ASIO_UNLIKELY(status == reactor_op::done_and_exhausted))
+        record_done_and_exhausted(OpType, descriptor_data);
+      descriptor_lock.unlock();
+      return true;
+    }
+  }
+
+  return start_unready_op(OpType, descriptor_data,
+      descriptor_lock, op, Perform);
 }
 
 template <typename TimeTraits, typename Allocator>
@@ -105,6 +138,7 @@ void epoll_reactor::move_timer(timer_queue<TimeTraits, Allocator>& queue,
 }
 
 } // namespace detail
+ASIO_INLINE_NAMESPACE_END
 } // namespace asio
 
 #include "asio/detail/pop_options.hpp"

@@ -2,7 +2,7 @@
 // detail/impl/scheduler.ipp
 // ~~~~~~~~~~~~~~~~~~~~~~~~~
 //
-// Copyright (c) 2003-2025 Christopher M. Kohlhoff (chris at kohlhoff dot com)
+// Copyright (c) 2003-2026 Christopher M. Kohlhoff (chris at kohlhoff dot com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -23,6 +23,7 @@
 #include "asio/detail/scheduler.hpp"
 #include "asio/detail/scheduler_thread_info.hpp"
 #include "asio/detail/signal_blocker.hpp"
+#include "asio/error.hpp"
 
 #if defined(ASIO_HAS_IO_URING_AS_DEFAULT)
 # include "asio/detail/io_uring_service.hpp"
@@ -33,6 +34,7 @@
 #include "asio/detail/push_options.hpp"
 
 namespace asio {
+ASIO_INLINE_NAMESPACE_BEGIN
 namespace detail {
 
 class scheduler::thread_function
@@ -45,8 +47,7 @@ public:
 
   void operator()()
   {
-    asio::error_code ec;
-    this_->run(ec);
+    this_->run();
   }
 
 private:
@@ -82,6 +83,22 @@ struct scheduler::work_cleanup
 {
   ~work_cleanup()
   {
+    // Exactly one unit of outstanding work needs no adjustment.
+    if (this_thread_->private_outstanding_work != 1)
+      adjust_outstanding_work();
+    this_thread_->private_outstanding_work = 0;
+
+#if defined(ASIO_HAS_THREADS)
+    if (ASIO_LIKELY(!this_thread_->private_op_queue.empty()))
+    {
+      lock_->lock();
+      scheduler_->op_queue_.push(this_thread_->private_op_queue);
+    }
+#endif // defined(ASIO_HAS_THREADS)
+  }
+
+  void adjust_outstanding_work()
+  {
     if (this_thread_->private_outstanding_work > 1)
     {
       asio::detail::increment(
@@ -92,15 +109,6 @@ struct scheduler::work_cleanup
     {
       scheduler_->work_finished();
     }
-    this_thread_->private_outstanding_work = 0;
-
-#if defined(ASIO_HAS_THREADS)
-    if (!this_thread_->private_op_queue.empty())
-    {
-      lock_->lock();
-      scheduler_->op_queue_.push(this_thread_->private_op_queue);
-    }
-#endif // defined(ASIO_HAS_THREADS)
   }
 
   scheduler* scheduler_;
@@ -112,6 +120,8 @@ scheduler::scheduler(asio::execution_context& ctx,
     bool own_thread, get_task_func_type get_task)
   : asio::detail::execution_context_service_base<scheduler>(ctx),
     one_thread_(config(ctx).get("scheduler", "concurrency_hint", 0) == 1),
+    assume_continuation_(config(ctx).get("scheduler",
+          "assume_continuation", one_thread_)),
     mutex_(config(ctx).get("scheduler", "locking", true),
         config(ctx).get("scheduler", "locking_spin_count", 0)),
     task_(0),
@@ -137,6 +147,7 @@ scheduler::scheduler(asio::execution_context& ctx,
 scheduler::scheduler(scheduler::internal, asio::execution_context& ctx)
   : asio::detail::execution_context_service_base<scheduler>(ctx),
     one_thread_(false),
+    assume_continuation_(false),
     mutex_(true, 0),
     task_(0),
     get_task_(&scheduler::get_default_task),
@@ -197,14 +208,15 @@ void scheduler::init_task()
   }
 }
 
-std::size_t scheduler::run(asio::error_code& ec)
+std::size_t scheduler::run()
 {
-  ec = asio::error_code();
   if (outstanding_work_ == 0)
   {
     stop();
     return 0;
   }
+
+  ASIO_HANDLER_SCHEDULER_RUN((&this->context(), "run"));
 
   thread_info this_thread;
   this_thread.private_outstanding_work = 0;
@@ -212,16 +224,35 @@ std::size_t scheduler::run(asio::error_code& ec)
 
   mutex::scoped_lock lock(mutex_);
 
+  const bool may_wake = wake_possible();
   std::size_t n = 0;
-  for (; do_run_one(lock, this_thread, ec); lock.lock())
+  for (; do_run_one(lock, this_thread, may_wake); lock.lock())
     if (n != (std::numeric_limits<std::size_t>::max)())
       ++n;
   return n;
 }
 
-std::size_t scheduler::run_one(asio::error_code& ec)
+std::size_t scheduler::run_one()
 {
-  ec = asio::error_code();
+  if (outstanding_work_ == 0)
+  {
+    stop();
+    return 0;
+  }
+
+  ASIO_HANDLER_SCHEDULER_RUN((&this->context(), "run_one"));
+
+  thread_info this_thread;
+  this_thread.private_outstanding_work = 0;
+  thread_call_stack::context ctx(this, this_thread);
+
+  mutex::scoped_lock lock(mutex_);
+
+  return do_run_one(lock, this_thread, wake_possible());
+}
+
+std::size_t scheduler::wait_one(long usec)
+{
   if (outstanding_work_ == 0)
   {
     stop();
@@ -234,35 +265,18 @@ std::size_t scheduler::run_one(asio::error_code& ec)
 
   mutex::scoped_lock lock(mutex_);
 
-  return do_run_one(lock, this_thread, ec);
+  return do_wait_one(lock, this_thread, usec);
 }
 
-std::size_t scheduler::wait_one(long usec, asio::error_code& ec)
+std::size_t scheduler::poll()
 {
-  ec = asio::error_code();
   if (outstanding_work_ == 0)
   {
     stop();
     return 0;
   }
 
-  thread_info this_thread;
-  this_thread.private_outstanding_work = 0;
-  thread_call_stack::context ctx(this, this_thread);
-
-  mutex::scoped_lock lock(mutex_);
-
-  return do_wait_one(lock, this_thread, usec, ec);
-}
-
-std::size_t scheduler::poll(asio::error_code& ec)
-{
-  ec = asio::error_code();
-  if (outstanding_work_ == 0)
-  {
-    stop();
-    return 0;
-  }
+  ASIO_HANDLER_SCHEDULER_RUN((&this->context(), "poll"));
 
   thread_info this_thread;
   this_thread.private_outstanding_work = 0;
@@ -279,21 +293,24 @@ std::size_t scheduler::poll(asio::error_code& ec)
       op_queue_.push(outer_info->private_op_queue);
 #endif // defined(ASIO_HAS_THREADS)
 
+  const bool may_wake = wake_possible();
+  bool task_has_run = false;
   std::size_t n = 0;
-  for (; do_poll_one(lock, this_thread, ec); lock.lock())
+  for (; do_poll_one(lock, this_thread, may_wake, task_has_run); lock.lock())
     if (n != (std::numeric_limits<std::size_t>::max)())
       ++n;
   return n;
 }
 
-std::size_t scheduler::poll_one(asio::error_code& ec)
+std::size_t scheduler::poll_one()
 {
-  ec = asio::error_code();
   if (outstanding_work_ == 0)
   {
     stop();
     return 0;
   }
+
+  ASIO_HANDLER_SCHEDULER_RUN((&this->context(), "poll_one"));
 
   thread_info this_thread;
   this_thread.private_outstanding_work = 0;
@@ -310,7 +327,8 @@ std::size_t scheduler::poll_one(asio::error_code& ec)
       op_queue_.push(outer_info->private_op_queue);
 #endif // defined(ASIO_HAS_THREADS)
 
-  return do_poll_one(lock, this_thread, ec);
+  bool task_has_run = false;
+  return do_poll_one(lock, this_thread, wake_possible(), task_has_run);
 }
 
 void scheduler::stop()
@@ -353,7 +371,7 @@ void scheduler::post_immediate_completion(
     scheduler::operation* op, bool is_continuation)
 {
 #if defined(ASIO_HAS_THREADS)
-  if (one_thread_ || is_continuation)
+  if (assume_continuation_ || is_continuation)
   {
     if (thread_info_base* this_thread = thread_call_stack::contains(this))
     {
@@ -366,17 +384,22 @@ void scheduler::post_immediate_completion(
   (void)is_continuation;
 #endif // defined(ASIO_HAS_THREADS)
 
+  do_post_immediate_completion(op);
+}
+
+void scheduler::do_post_immediate_completion(scheduler::operation* op)
+{
   work_started();
   mutex::scoped_lock lock(mutex_);
   op_queue_.push(op);
-  wake_one_thread_and_unlock(lock);
+  wake_if_needed_and_unlock(lock);
 }
 
 void scheduler::post_immediate_completions(std::size_t n,
     op_queue<scheduler::operation>& ops, bool is_continuation)
 {
 #if defined(ASIO_HAS_THREADS)
-  if (one_thread_ || is_continuation)
+  if (assume_continuation_ || is_continuation)
   {
     if (thread_info_base* this_thread = thread_call_stack::contains(this))
     {
@@ -390,16 +413,22 @@ void scheduler::post_immediate_completions(std::size_t n,
   (void)is_continuation;
 #endif // defined(ASIO_HAS_THREADS)
 
+  do_post_immediate_completions(n, ops);
+}
+
+void scheduler::do_post_immediate_completions(
+    std::size_t n, op_queue<scheduler::operation>& ops)
+{
   increment(outstanding_work_, static_cast<long>(n));
   mutex::scoped_lock lock(mutex_);
   op_queue_.push(ops);
-  wake_one_thread_and_unlock(lock);
+  wake_if_needed_and_unlock(lock);
 }
 
 void scheduler::post_deferred_completion(scheduler::operation* op)
 {
 #if defined(ASIO_HAS_THREADS)
-  if (one_thread_)
+  if (assume_continuation_)
   {
     if (thread_info_base* this_thread = thread_call_stack::contains(this))
     {
@@ -409,9 +438,14 @@ void scheduler::post_deferred_completion(scheduler::operation* op)
   }
 #endif // defined(ASIO_HAS_THREADS)
 
+  do_post_deferred_completion(op);
+}
+
+void scheduler::do_post_deferred_completion(scheduler::operation* op)
+{
   mutex::scoped_lock lock(mutex_);
   op_queue_.push(op);
-  wake_one_thread_and_unlock(lock);
+  wake_if_needed_and_unlock(lock);
 }
 
 void scheduler::post_deferred_completions(
@@ -420,7 +454,7 @@ void scheduler::post_deferred_completions(
   if (!ops.empty())
   {
 #if defined(ASIO_HAS_THREADS)
-    if (one_thread_)
+    if (assume_continuation_)
     {
       if (thread_info_base* this_thread = thread_call_stack::contains(this))
       {
@@ -430,10 +464,16 @@ void scheduler::post_deferred_completions(
     }
 #endif // defined(ASIO_HAS_THREADS)
 
-    mutex::scoped_lock lock(mutex_);
-    op_queue_.push(ops);
-    wake_one_thread_and_unlock(lock);
+    do_post_deferred_completions(ops);
   }
+}
+
+void scheduler::do_post_deferred_completions(
+    op_queue<scheduler::operation>& ops)
+{
+  mutex::scoped_lock lock(mutex_);
+  op_queue_.push(ops);
+  wake_one_thread_and_unlock(lock);
 }
 
 void scheduler::do_dispatch(
@@ -442,7 +482,7 @@ void scheduler::do_dispatch(
   work_started();
   mutex::scoped_lock lock(mutex_);
   op_queue_.push(op);
-  wake_one_thread_and_unlock(lock);
+  wake_if_needed_and_unlock(lock);
 }
 
 void scheduler::abandon_operations(
@@ -453,80 +493,81 @@ void scheduler::abandon_operations(
 }
 
 std::size_t scheduler::do_run_one(mutex::scoped_lock& lock,
-    scheduler::thread_info& this_thread,
-    const asio::error_code& ec)
+    scheduler::thread_info& this_thread, bool may_wake)
 {
   while (!stopped_)
   {
-    if (!op_queue_.empty())
+    if (ASIO_UNLIKELY(op_queue_.empty()))
     {
-      // Prepare to execute first handler from queue.
-      operation* o = op_queue_.front();
-      op_queue_.pop();
-      bool more_handlers = (!op_queue_.empty());
+      do_sleep(lock);
+      continue;
+    }
 
-      if (o == &task_operation_)
+    // Prepare to execute first handler from queue.
+    operation* o = op_queue_.front();
+    op_queue_.pop();
+    bool more_handlers = (!op_queue_.empty());
+
+    if (ASIO_UNLIKELY(o == &task_operation_))
+    {
+      task_interrupted_ = more_handlers || task_usec_ == 0;
+
+      if (more_handlers && !one_thread_ && wait_usec_ != 0)
+        wakeup_event_.unlock_and_signal_one(lock);
+      else
+        lock.unlock();
+
       {
-        task_interrupted_ = more_handlers || task_usec_ == 0;
-
-        if (more_handlers && !one_thread_ && wait_usec_ != 0)
-          wakeup_event_.unlock_and_signal_one(lock);
-        else
-          lock.unlock();
-
         task_cleanup on_exit = { this, &lock, &this_thread };
         (void)on_exit;
 
-        // Run the task. May throw an exception. Only block if the operation
-        // queue is empty and we're not polling, otherwise we want to return
-        // as soon as possible.
         task_->run(more_handlers ? 0 : task_usec_,
             this_thread.private_op_queue);
       }
-      else
-      {
-        std::size_t task_result = o->task_result_;
 
-        if (more_handlers && !one_thread_)
-          wake_one_thread_and_unlock(lock);
-        else
-          lock.unlock();
-
-        // Ensure the count of outstanding work is decremented on block exit.
-        work_cleanup on_exit = { this, &lock, &this_thread };
-        (void)on_exit;
-
-        // Complete the operation. May throw an exception. Deletes the object.
-        o->complete(this, ec, task_result);
-        this_thread.rethrow_pending_exception();
-
-        return 1;
-      }
+      continue;
     }
+
+    std::size_t task_result = o->task_result_;
+
+    if (more_handlers && may_wake && must_wake(lock))
+      wake_one_thread_and_unlock(lock);
     else
-    {
-      if (wait_usec_ == 0)
-      {
-        lock.unlock();
-        lock.lock();
-      }
-      else
-      {
-        wakeup_event_.clear(lock);
-        if (wait_usec_ > 0)
-          wakeup_event_.wait_for_usec(lock, wait_usec_);
-        else
-          wakeup_event_.wait(lock);
-      }
-    }
+      lock.unlock();
+
+    // Ensure the count of outstanding work is decremented on block exit.
+    work_cleanup on_exit = { this, &lock, &this_thread };
+    (void)on_exit;
+
+    // Complete the operation. May throw an exception. Deletes the object.
+    o->complete(this, 0, task_result);
+    this_thread.rethrow_pending_exception();
+
+    return 1;
   }
 
   return 0;
 }
 
+void scheduler::do_sleep(mutex::scoped_lock& lock)
+{
+  if (wait_usec_ == 0)
+  {
+    lock.unlock();
+    lock.lock();
+  }
+  else
+  {
+    wakeup_event_.clear(lock);
+    if (wait_usec_ > 0)
+      wakeup_event_.wait_for_usec(lock, wait_usec_);
+    else
+      wakeup_event_.wait(lock);
+  }
+}
+
 std::size_t scheduler::do_wait_one(mutex::scoped_lock& lock,
-    scheduler::thread_info& this_thread, long usec,
-    const asio::error_code& ec)
+    scheduler::thread_info& this_thread, long usec)
 {
   if (stopped_)
     return 0;
@@ -581,7 +622,7 @@ std::size_t scheduler::do_wait_one(mutex::scoped_lock& lock,
 
   std::size_t task_result = o->task_result_;
 
-  if (more_handlers && !one_thread_)
+  if (more_handlers && wake_possible() && must_wake(lock))
     wake_one_thread_and_unlock(lock);
   else
     lock.unlock();
@@ -591,15 +632,14 @@ std::size_t scheduler::do_wait_one(mutex::scoped_lock& lock,
   (void)on_exit;
 
   // Complete the operation. May throw an exception. Deletes the object.
-  o->complete(this, ec, task_result);
+  o->complete(this, 0, task_result);
   this_thread.rethrow_pending_exception();
 
   return 1;
 }
 
 std::size_t scheduler::do_poll_one(mutex::scoped_lock& lock,
-    scheduler::thread_info& this_thread,
-    const asio::error_code& ec)
+    scheduler::thread_info& this_thread, bool may_wake, bool& task_has_run)
 {
   if (stopped_)
     return 0;
@@ -607,6 +647,14 @@ std::size_t scheduler::do_poll_one(mutex::scoped_lock& lock,
   operation* o = op_queue_.front();
   if (o == &task_operation_)
   {
+    if (task_has_run)
+    {
+      if (!one_thread_)
+        wakeup_event_.maybe_unlock_and_signal_one(lock);
+      return 0;
+    }
+
+    task_has_run = true;
     op_queue_.pop();
     lock.unlock();
 
@@ -614,16 +662,16 @@ std::size_t scheduler::do_poll_one(mutex::scoped_lock& lock,
       task_cleanup c = { this, &lock, &this_thread };
       (void)c;
 
-      // Run the task. May throw an exception. Only block if the operation
-      // queue is empty and we're not polling, otherwise we want to return
-      // as soon as possible.
+      // Run the task. May throw an exception. Never blocks, because the caller
+      // is polling.
       task_->run(0, this_thread.private_op_queue);
     }
 
     o = op_queue_.front();
     if (o == &task_operation_)
     {
-      wakeup_event_.maybe_unlock_and_signal_one(lock);
+      if (!one_thread_)
+        wakeup_event_.maybe_unlock_and_signal_one(lock);
       return 0;
     }
   }
@@ -636,7 +684,7 @@ std::size_t scheduler::do_poll_one(mutex::scoped_lock& lock,
 
   std::size_t task_result = o->task_result_;
 
-  if (more_handlers && !one_thread_)
+  if (more_handlers && may_wake && must_wake(lock))
     wake_one_thread_and_unlock(lock);
   else
     lock.unlock();
@@ -646,7 +694,7 @@ std::size_t scheduler::do_poll_one(mutex::scoped_lock& lock,
   (void)on_exit;
 
   // Complete the operation. May throw an exception. Deletes the object.
-  o->complete(this, ec, task_result);
+  o->complete(this, 0, task_result);
   this_thread.rethrow_pending_exception();
 
   return 1;
@@ -689,6 +737,7 @@ scheduler_task* scheduler::get_default_task(asio::execution_context& ctx)
 }
 
 } // namespace detail
+ASIO_INLINE_NAMESPACE_END
 } // namespace asio
 
 #include "asio/detail/pop_options.hpp"

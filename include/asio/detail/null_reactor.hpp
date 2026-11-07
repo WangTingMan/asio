@@ -2,7 +2,7 @@
 // detail/null_reactor.hpp
 // ~~~~~~~~~~~~~~~~~~~~~~~
 //
-// Copyright (c) 2003-2025 Christopher M. Kohlhoff (chris at kohlhoff dot com)
+// Copyright (c) 2003-2026 Christopher M. Kohlhoff (chris at kohlhoff dot com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -21,13 +21,14 @@
   || defined(ASIO_WINDOWS_RUNTIME) \
   || defined(ASIO_HAS_IO_URING_AS_DEFAULT)
 
-#include "asio/detail/scheduler_operation.hpp"
+#include "asio/detail/operation.hpp"
 #include "asio/detail/scheduler_task.hpp"
 #include "asio/execution_context.hpp"
 
 #include "asio/detail/push_options.hpp"
 
 namespace asio {
+ASIO_INLINE_NAMESPACE_BEGIN
 namespace detail {
 
 class null_reactor
@@ -38,6 +39,13 @@ public:
   struct per_descriptor_data
   {
   };
+
+  // Give a descriptor a name, used to lookup per-descriptor configuration.
+  void set_descriptor_name(per_descriptor_data&,
+      const char* /*name*/, asio::error_code& ec)
+  {
+    asio::error::clear(ec);
+  }
 
   // Constructor.
   null_reactor(asio::execution_context& ctx)
@@ -61,7 +69,7 @@ public:
   }
 
   // No-op because should never be called.
-  void run(long /*usec*/, op_queue<scheduler_operation>& /*ops*/)
+  void run(long /*usec*/, op_queue<operation>& /*ops*/)
   {
   }
 
@@ -72,6 +80,7 @@ public:
 };
 
 } // namespace detail
+ASIO_INLINE_NAMESPACE_END
 } // namespace asio
 
 #include "asio/detail/pop_options.hpp"

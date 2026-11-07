@@ -2,7 +2,7 @@
 // detail/type_traits.hpp
 // ~~~~~~~~~~~~~~~~~~~~~~
 //
-// Copyright (c) 2003-2025 Christopher M. Kohlhoff (chris at kohlhoff dot com)
+// Copyright (c) 2003-2026 Christopher M. Kohlhoff (chris at kohlhoff dot com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -19,6 +19,7 @@
 #include <type_traits>
 
 namespace asio {
+ASIO_INLINE_NAMESPACE_BEGIN
 
 using std::add_const;
 
@@ -81,9 +82,34 @@ using std::is_nothrow_default_constructible;
 
 using std::is_destructible;
 
+using std::is_empty;
+
+using std::is_enum;
+
+#if defined(ASIO_HAS_STD_IS_FINAL)
+
+using std::is_final;
+
+#elif defined(__clang__) \
+  || (defined(__GNUC__) && ((__GNUC__ == 4 && __GNUC_MINOR__ >= 7) \
+    || (__GNUC__ > 4)))
+
+template <typename T>
+struct is_final : integral_constant<bool, __is_final(T)> {};
+
+#else // defined(ASIO_HAS_STD_IS_FINAL)
+
+// Finality cannot be detected, so final types are treated as non-final.
+template <typename T>
+struct is_final : false_type {};
+
+#endif // defined(ASIO_HAS_STD_IS_FINAL)
+
 using std::is_function;
 
 using std::is_integral;
+
+using std::is_lvalue_reference;
 
 using std::is_move_constructible;
 
@@ -154,6 +180,8 @@ using result_of_t = typename std::result_of<T>::type;
 
 using std::true_type;
 
+using std::underlying_type;
+
 template <typename> struct void_type
 {
   typedef void type;
@@ -187,6 +215,7 @@ struct type_identity { typedef T type; };
 template <typename T>
 using type_identity_t = typename type_identity<T>::type;
 
+ASIO_INLINE_NAMESPACE_END
 } // namespace asio
 
 #endif // ASIO_DETAIL_TYPE_TRAITS_HPP

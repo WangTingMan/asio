@@ -2,7 +2,7 @@
 // detail/scheduler_operation.hpp
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //
-// Copyright (c) 2003-2025 Christopher M. Kohlhoff (chris at kohlhoff dot com)
+// Copyright (c) 2003-2026 Christopher M. Kohlhoff (chris at kohlhoff dot com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -22,6 +22,7 @@
 #include "asio/detail/push_options.hpp"
 
 namespace asio {
+ASIO_INLINE_NAMESPACE_BEGIN
 namespace detail {
 
 class scheduler;
@@ -33,21 +34,18 @@ class scheduler_operation ASIO_INHERIT_TRACKED_HANDLER
 public:
   typedef scheduler_operation operation_type;
 
-  void complete(void* owner, const asio::error_code& ec,
-      std::size_t bytes_transferred)
+  void complete(void* owner, int error_value, std::size_t bytes_transferred)
   {
-    func_(owner, this, ec, bytes_transferred);
+    func_(owner, this, error_value, bytes_transferred);
   }
 
   void destroy()
   {
-    func_(0, this, asio::error_code(), 0);
+    func_(0, this, 0, 0);
   }
 
 protected:
-  typedef void (*func_type)(void*,
-      scheduler_operation*,
-      const asio::error_code&, std::size_t);
+  typedef void (*func_type)(void*, scheduler_operation*, int, std::size_t);
 
   scheduler_operation(func_type func)
     : next_(0),
@@ -63,7 +61,7 @@ protected:
 
 private:
   friend class op_queue_access;
-  scheduler_operation* next_;
+  scheduler_operation* next_ ASIO_UNUSED_MEMBER;
   func_type func_;
 protected:
   friend class scheduler;
@@ -71,6 +69,7 @@ protected:
 };
 
 } // namespace detail
+ASIO_INLINE_NAMESPACE_END
 } // namespace asio
 
 #include "asio/detail/pop_options.hpp"

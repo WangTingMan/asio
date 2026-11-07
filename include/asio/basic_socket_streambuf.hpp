@@ -2,7 +2,7 @@
 // basic_socket_streambuf.hpp
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~
 //
-// Copyright (c) 2003-2025 Christopher M. Kohlhoff (chris at kohlhoff dot com)
+// Copyright (c) 2003-2026 Christopher M. Kohlhoff (chris at kohlhoff dot com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -26,12 +26,14 @@
 #include "asio/detail/buffer_sequence_adapter.hpp"
 #include "asio/detail/memory.hpp"
 #include "asio/detail/throw_error.hpp"
+#include "asio/error.hpp"
 #include "asio/io_context.hpp"
 #include "asio/steady_timer.hpp"
 
 #include "asio/detail/push_options.hpp"
 
 namespace asio {
+ASIO_INLINE_NAMESPACE_BEGIN
 namespace detail {
 
 // A separate base class is used to ensure that the io_context member is
@@ -146,7 +148,7 @@ public:
     put_buffer_.swap(other.put_buffer_);
     setg(other.eback(), other.gptr(), other.egptr());
     setp(other.pptr(), other.epptr());
-    other.ec_ = asio::error_code();
+    asio::error::clear(other.ec_);
     other.expiry_time_ = max_expiry_time();
     other.init_buffers();
   }
@@ -163,7 +165,7 @@ public:
     put_buffer_.swap(other.put_buffer_);
     setg(other.eback(), other.gptr(), other.egptr());
     setp(other.pptr(), other.epptr());
-    other.ec_ = asio::error_code();
+    asio::error::clear(other.ec_);
     other.expiry_time_ = max_expiry_time();
     other.put_buffer_.resize(buffer_size);
     other.init_buffers();
@@ -187,7 +189,7 @@ public:
   basic_socket_streambuf* connect(const endpoint_type& endpoint)
   {
     init_buffers();
-    ec_ = asio::error_code();
+    asio::error::clear(ec_);
     this->connect_to_endpoints(&endpoint, &endpoint + 1);
     return !ec_ ? this : 0;
   }
@@ -536,6 +538,7 @@ private:
   time_point expiry_time_;
 };
 
+ASIO_INLINE_NAMESPACE_END
 } // namespace asio
 
 #include "asio/detail/pop_options.hpp"

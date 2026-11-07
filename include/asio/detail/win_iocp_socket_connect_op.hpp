@@ -1,8 +1,8 @@
 //
 // detail/win_iocp_socket_connect_op.hpp
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //
-// Copyright (c) 2003-2025 Christopher M. Kohlhoff (chris at kohlhoff dot com)
+// Copyright (c) 2003-2026 Christopher M. Kohlhoff (chris at kohlhoff dot com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -31,6 +31,7 @@
 #include "asio/detail/push_options.hpp"
 
 namespace asio {
+ASIO_INLINE_NAMESPACE_BEGIN
 namespace detail {
 
 class win_iocp_socket_connect_op_base : public reactor_op
@@ -74,16 +75,14 @@ public:
   }
 
   static void do_complete(void* owner, operation* base,
-      const asio::error_code& result_ec,
-      std::size_t /*bytes_transferred*/)
+      int error_value, std::size_t /*bytes_transferred*/)
   {
-    asio::error_code ec(result_ec);
-
     // Take ownership of the operation object.
     ASIO_ASSUME(base != 0);
     win_iocp_socket_connect_op* o(
         static_cast<win_iocp_socket_connect_op*>(base));
     ptr p = { asio::detail::addressof(o->handler_), o, o };
+    asio::error_code ec(o->make_error_code(error_value));
 
     if (owner)
     {
@@ -129,6 +128,7 @@ private:
 };
 
 } // namespace detail
+ASIO_INLINE_NAMESPACE_END
 } // namespace asio
 
 #include "asio/detail/pop_options.hpp"

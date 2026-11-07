@@ -2,7 +2,7 @@
 // posix/basic_descriptor.hpp
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~
 //
-// Copyright (c) 2003-2025 Christopher M. Kohlhoff (chris at kohlhoff dot com)
+// Copyright (c) 2003-2026 Christopher M. Kohlhoff (chris at kohlhoff dot com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -40,7 +40,17 @@
 #include "asio/detail/push_options.hpp"
 
 namespace asio {
+ASIO_INLINE_NAMESPACE_BEGIN
 namespace posix {
+
+#if !defined(ASIO_POSIX_BASIC_DESCRIPTOR_FWD_DECL)
+#define ASIO_POSIX_BASIC_DESCRIPTOR_FWD_DECL
+
+// Forward declaration with defaulted arguments.
+template <typename Executor = any_io_executor>
+class basic_descriptor;
+
+#endif // !defined(ASIO_POSIX_BASIC_DESCRIPTOR_FWD_DECL)
 
 /// Provides POSIX descriptor functionality.
 /**
@@ -51,7 +61,7 @@ namespace posix {
  * @e Distinct @e objects: Safe.@n
  * @e Shared @e objects: Unsafe.
  */
-template <typename Executor = any_io_executor>
+template <typename Executor>
 class basic_descriptor
   : public descriptor_base
 {
@@ -412,9 +422,8 @@ public:
    *
    * @throws asio::system_error Thrown on failure.
    *
-   * @sa IoControlCommand @n
-   * asio::posix::descriptor_base::bytes_readable @n
-   * asio::posix::descriptor_base::non_blocking_io
+   * @sa
+   * @li asio::posix::descriptor_base::bytes_readable
    *
    * @par Example
    * Getting the number of bytes ready to read:
@@ -442,9 +451,8 @@ public:
    *
    * @param ec Set to indicate what error occurred, if any.
    *
-   * @sa IoControlCommand @n
-   * asio::posix::descriptor_base::bytes_readable @n
-   * asio::posix::descriptor_base::non_blocking_io
+   * @sa
+   * @li asio::posix::descriptor_base::bytes_readable
    *
    * @par Example
    * Getting the number of bytes ready to read:
@@ -703,7 +711,8 @@ public:
       async_initiate<WaitToken, void (asio::error_code)>(
         declval<initiate_async_wait>(), token, w))
   {
-    return async_initiate<WaitToken, void (asio::error_code)>(
+    ASIO_INVOKE_INLINE return async_initiate<WaitToken,
+      void (asio::error_code)>(
         initiate_async_wait(this), token, w);
   }
 
@@ -752,7 +761,7 @@ private:
       ASIO_WAIT_HANDLER_CHECK(WaitHandler, handler) type_check;
 
       detail::non_const_lvalue<WaitHandler> handler2(handler);
-      self_->impl_.get_service().async_wait(
+      ASIO_INVOKE_INLINE self_->impl_.get_service().async_wait(
           self_->impl_.get_implementation(), w,
           handler2.value, self_->impl_.get_executor());
     }
@@ -763,6 +772,7 @@ private:
 };
 
 } // namespace posix
+ASIO_INLINE_NAMESPACE_END
 } // namespace asio
 
 #include "asio/detail/pop_options.hpp"

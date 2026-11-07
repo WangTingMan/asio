@@ -2,7 +2,7 @@
 // detail/op_queue.hpp
 // ~~~~~~~~~~~~~~~~~~~
 //
-// Copyright (c) 2003-2025 Christopher M. Kohlhoff (chris at kohlhoff dot com)
+// Copyright (c) 2003-2026 Christopher M. Kohlhoff (chris at kohlhoff dot com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -15,11 +15,13 @@
 # pragma once
 #endif // defined(_MSC_VER) && (_MSC_VER >= 1200)
 
+#include "asio/detail/config.hpp"
 #include "asio/detail/noncopyable.hpp"
 
 #include "asio/detail/push_options.hpp"
 
 namespace asio {
+ASIO_INLINE_NAMESPACE_BEGIN
 namespace detail {
 
 template <typename Operation>
@@ -74,11 +76,8 @@ public:
   // Destructor destroys all operations.
   ~op_queue()
   {
-    while (Operation* op = front_)
-    {
-      pop();
-      op_queue_access::destroy(op);
-    }
+    if (front_)
+      destroy_all();
   }
 
   // Get the operation at the front of the queue.
@@ -145,6 +144,16 @@ public:
   }
 
 private:
+  // Destroy all operations remaining in the queue.
+  ASIO_NEVER_INLINE void destroy_all()
+  {
+    while (Operation* op = front_)
+    {
+      pop();
+      op_queue_access::destroy(op);
+    }
+  }
+
   friend class op_queue_access;
 
   // The front of the queue.
@@ -155,6 +164,7 @@ private:
 };
 
 } // namespace detail
+ASIO_INLINE_NAMESPACE_END
 } // namespace asio
 
 #include "asio/detail/pop_options.hpp"
